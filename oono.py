@@ -8,34 +8,47 @@ import aiohttp
 import websockets
 from datetime import date, datetime
 from calendar import monthrange, weekday
+from pymongo.client_session import ClientSession
+from motor.motor_asyncio import AsyncIOMotorClient
+
+
+from typing import Optional
 
 
 def log(s: str):
-    print(s, file=sys.stderr)
+    print(f"[{datetime.now().isoformat()}] {s}", file=sys.stderr)
 
 
 class OonoApp:
 
-    def __init__(self, app_token: str, bot_token: str):
-        self._app_token = app_token
-        self._bot_token = bot_token
+    def __init__(self, slack_config: dict, mongo_config: Optional[dict]):
+        self._app_token = slack_config["token"]["app"]
+        self._workspace_token = slack_config["token"]["workspace"]
         self._app_session = None
         self._bot_session = None
+
+        self._db_client = AsyncIOMotorClient(mongo_config["url"]) if mongo_config is not None else None
+        self._db_name = mongo_config["db"] if mongo_config is not None else None
+        self._db_session = None
+        self._db = None
 
     async def __aenter__(self):
         self._app_session = aiohttp.ClientSession(
             headers={"Authorization": f"Bearer {self._app_token}"}
         )
-        self._bot_session = aiohttp.ClientSession(
-            headers={"Authorization": f"Bearer {self._bot_token}"}
-        )
+        self._bot_session = aiohttp.ClientSession()
+        if self._db_client is not None:
+            self._db_session = await self._db_client.start_session()
+            self._db = self._db_client[self._db_name]
         return self
 
     async def __aexit__(self, *err):
-        await asyncio.gather(
+        coroutines = [
             self._app_session.close(),
-            self._bot_session.close()
-        )
+            self._bot_session.close(),
+            self._db_session.end_session() if self._db_session is not None else None
+        ]
+        await asyncio.gather(*filter(lambda cr: cr is not None, coroutines))
 
     async def run(self):
         while True:
@@ -57,36 +70,9 @@ class OonoApp:
 
                 async with websockets.connect(conn_url["url"], close_timeout=0) as conn:
                     async for message in conn:
-
                         message = json.loads(message)
-                        ack_payload = None
-
-                        if message["type"] == "hello":
-                            log(f"WebSocket connection established, appid = {message['connection_info']['app_id']}")
-                        elif message["type"] == "disconnect":
-                            log(f"Received disconnect request, reason: {message['reason']}")
-                            break
-                        elif message["type"] == "events_api":
-                            retry_attempt = message["retry_attempt"]
-                            if retry_attempt == 0:
-                                event = message["payload"]["event"]
-                                if event["type"] == "app_mention":
-                                    ack_payload = self.handle_mention(event)
-                                else:
-                                    log(f"Unhandled event: {event}")
-                            else:
-                                log(f"Retried event: {message}")
-                        else:
-                            log(f"Unhandled message: {message}")
-
-                        if "envelope_id" in message:
-                            ack = json.dumps({
-                                "envelope_id": message["envelope_id"],
-                                "payload": await ack_payload if ack_payload is not None else None
-                            })
-                            asyncio.create_task(conn.send(ack))
-                            await conn.send(ack)
-
+                        asyncio.create_task(self.record_message(message))
+                        asyncio.create_task(self.handle_message(conn, message))
 
                 log(f"Disconnected.")
 
@@ -95,16 +81,74 @@ class OonoApp:
                 import traceback
                 traceback.print_exc()
 
-    async def handle_mention(self, event):
-        resp = await self._bot_session.post("https://slack.com/api/chat.postMessage", json={
+    async def record_message(self, message: dict):
+        if self._db is None:
+            return
+        if "envelope_id" in message:
+            await self._db.ws_payload.insert_one({
+                "_id": message["envelope_id"],
+                "timestamp": time.time(),
+                **message
+            }, session=self._db_session)
+
+    async def handle_message(self, conn: websockets.WebSocketClientProtocol, message: dict):
+
+        ack_payload = None
+
+        if message["type"] == "hello":
+            log(f"WebSocket connection established, appid = {message['connection_info']['app_id']}")
+        elif message["type"] == "disconnect":
+            log(f"Received disconnect request, reason: {message['reason']}")
+            await conn.close()
+        elif message["type"] == "events_api":
+            retry_attempt = message["retry_attempt"]
+            if retry_attempt == 0:
+                team = message["payload"]["team_id"]
+                event = message["payload"]["event"]
+                if event["type"] == "app_mention":
+                    ack_payload = self.handle_mention(team, event)
+                else:
+                    log(f"Unhandled event: {event}")
+            else:
+                log(f"Retried event: {message}")
+        else:
+            log(f"Unhandled message: {message}")
+
+        if "envelope_id" in message:
+            ack = json.dumps({
+                "envelope_id": message["envelope_id"],
+                "payload": await ack_payload if ack_payload is not None else None
+            })
+            asyncio.create_task(conn.send(ack))
+            await conn.send(ack)
+
+    async def handle_mention(self, team, event):
+
+        team_info = self._workspace_token.get(team)
+        if team_info is None:
+            log(f"Error: Team ID {team} is not found in config")
+            return
+        log(f"Received mention from team {team_info['name']}")
+
+        message = {
             "channel": event["channel"],
             "text": self.get_message()
-        }, headers={
-            "Content-Type": "application/json; charset=utf-8"
-        })
+        }
+
+        if "thread_ts" in event:
+            message["thread_ts"] = event["thread_ts"]
+
+        resp = await self._bot_session.post(
+            "https://slack.com/api/chat.postMessage", json=message,
+            headers={
+                "Content-Type": "application/json; charset=utf-8",
+                "Authorization": f"Bearer {team_info['token']}"
+            })
+
         if not resp.ok:
             log(f"Error sending message: {resp.status_code}")
             return
+
         j = await resp.json()
         if not j["ok"]:
             log(f"chat.postMessage returned error: {j['error']}")
@@ -166,9 +210,7 @@ class OonoApp:
 async def amain():
     with open("config.json") as f:
         config = json.load(f)
-    app_token = config["slack"]["token"]["app"]
-    bot_token = config["slack"]["token"]["workspace"]["mai"]
-    async with OonoApp(app_token, bot_token) as oono:
+    async with OonoApp(config["slack"], config["mongo"]) as oono:
         await oono.run()
 
 
