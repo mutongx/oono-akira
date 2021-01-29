@@ -55,7 +55,7 @@ class OonoApp:
                     time.sleep(5)
                     continue
 
-                async with websockets.connect(conn_url["url"]) as conn:
+                async with websockets.connect(conn_url["url"], close_timeout=0) as conn:
                     async for message in conn:
 
                         message = json.loads(message)
@@ -173,4 +173,8 @@ async def amain():
 
 
 if __name__ == "__main__":
-    asyncio.run(amain())
+    try:
+        asyncio.run(amain())
+    except KeyboardInterrupt:
+        log("Exited.")
+        pass
