@@ -130,3 +130,11 @@ dmypy.json
 
 # bot config
 config*.json
+
+# bot db
+oono.db
+
+# https certificate
+*.crt
+*.csr
+*.key
