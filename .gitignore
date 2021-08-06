@@ -138,3 +138,4 @@ oono.db
 *.crt
 *.csr
 *.key
+*.pem
