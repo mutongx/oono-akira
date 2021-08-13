@@ -1,12 +1,9 @@
 from datetime import datetime
 from calendar import monthrange
-from oono_akira.slack import SlackAPI, SlackContext
+from oono_akira.slack import SlackContext
+from oono_akira.modules.__base__ import ModuleBase
 
-class Moyu:
-
-    def __init__(self, slack_api: SlackAPI, slack_context: SlackContext):
-        self._slack_api = slack_api
-        self._slack_context = slack_context
+class Moyu(ModuleBase):
 
     @staticmethod
     def check_app_mention(context: SlackContext):

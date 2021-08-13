@@ -1,6 +1,6 @@
-class Loader:
+from oono_akira.modules.__base__ import ModuleBase
 
-    def __init__(self):
-        pass
+class Loader(ModuleBase):
+    pass
 
 MODULE = Loader

@@ -1,16 +1,13 @@
-from oono_akira.slack import SlackAPI, SlackContext
+from oono_akira.modules.__base__ import ModuleBase
+from oono_akira.slack import SlackContext
 
-class Paren:
+class Paren(ModuleBase):
 
     _L = "([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲⏜⎴⏞⏠﹁﹃︹︻︗︿︽﹇︷"
     _R = ")]}）］｝⦆〛⦄”’›»」〉》】〕⦘』〗〙｣⟧⟩⟫⟯⟭⌉⌋⦈⦊❜❞❩❫❵❭❯❱❳⏝⎵⏟⏡﹂﹄︺︼︘﹀︾﹈︸"
     _MAPPING = {
         l: r for l, r in zip(_L, _R)
     }
-
-    def __init__(self, slack_api: SlackAPI, slack_context: SlackContext):
-        self._slack_api = slack_api
-        self._slack_context = slack_context
 
     @staticmethod
     def check_message(context: SlackContext):
