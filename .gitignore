@@ -139,3 +139,10 @@ oono.db
 *.csr
 *.key
 *.pem
+
+# vim swap file
+*.swp
+
+# IDE file
+.vscode/
+.idea/
