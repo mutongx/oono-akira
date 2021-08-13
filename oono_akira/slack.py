@@ -1,3 +1,4 @@
+from oono_akira.log import log
 from typing import Tuple, Optional
 from aiohttp import ClientSession
 
@@ -46,7 +47,10 @@ class SlackAPI:
             headers=headers,
             **args
         )
-        return await resp.json()
+        result = await resp.json()
+        if not result.get('ok'):
+            log(f"Error: {result}")
+        return result
 
 
 class SlackContext(dict):

@@ -64,6 +64,8 @@ class OonoAkira:
     async def _oauth_handler(self, request: Request):
         code = request.rel_url.query["code"]
         resp = await SlackAPI(self._api_client).oauth.v2.access(code=code, **self._slack_oauth)
+        if not resp["ok"]:
+            return web.Response(text=resp["error"])
         self._db.add_workspace(
             resp["team"]["id"], resp["team"]["name"],
             resp["bot_user_id"], resp["authed_user"]["id"],
@@ -93,6 +95,10 @@ class OonoAkira:
                         payload = json.loads(payload_str)
                         self._db.record_payload(f"websocket_{payload['type']}", payload_str)
 
+                        if payload.get("retry_attempt"):
+                            log(f"WebSocket Retry Event: {payload.get('retry_reason')}")
+                            continue
+
                         if payload["type"] == "events_api":
                             ack = await self._process_event(payload["payload"])
                             asyncio.create_task(self._ack_event(conn, payload, ack))
@@ -112,13 +118,16 @@ class OonoAkira:
 
     async def _process_event(self, event):
         ws_info = self._db.get_workspace_info(event["team_id"])
+        if event.get("event", {}).get("user") == ws_info["bot_id"]:
+            return
         context = SlackContext({
             "workspace": {
                 "name": ws_info["workspace_name"],
                 "bot": ws_info["bot_id"],
                 "admin": ws_info["admin_id"],
             },
-            "event": event["event"]
+            "event": event["event"],
+            "database": self._db,
         })
         ev_type = event["event"]["type"]
         for module_name in self._modules.get_capable_modules(ev_type):
