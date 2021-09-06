@@ -62,7 +62,7 @@ class Idiom(ModuleBase):
                 if session.get("status") != "ONGOING":
                     return False
                 return True
-    
+
     async def process(self):
         event = self._slack_context["event"]
         answer = event["text"]
