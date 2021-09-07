@@ -1,0 +1,18 @@
+{
+    "slack": {
+        "client_id": "1234567890123.1234567890123",
+        "client_secret": "0123456789abcdef0123456789abcdef",
+        "redirect_uri": "https://localhost:12306/oauth",
+        "token": "xapp-1-ABCDE12345-1234567890123-0123456789abcdef0123456789abcdef"
+    },
+    "server": {
+        "ssl": {
+            "cert": ".oono/cert.pem",
+            "key": ".oono/key.pem",
+            "port": 12306
+        }
+    },
+    "db": {
+        "path": ".oono/oono.db"
+    }
+}
