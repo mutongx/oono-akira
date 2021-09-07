@@ -129,16 +129,7 @@ dmypy.json
 .pyre/
 
 # bot config
-config*.json
-
-# bot db
-oono.db
-
-# https certificate
-*.crt
-*.csr
-*.key
-*.pem
+.oono/
 
 # vim swap file
 *.swp

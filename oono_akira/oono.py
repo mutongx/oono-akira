@@ -25,7 +25,7 @@ class OonoAkira:
         }
         self._slack_app_token = slack["token"]
 
-        self._db = OonoDatabase("oono.db")
+        self._db = OonoDatabase(config["db"]["path"])
 
         server = config["server"]
         if "ssl" in server:
