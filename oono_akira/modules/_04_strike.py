@@ -22,6 +22,8 @@ class Strike(ModuleBase):
     async def process(self):
         event = self._slack_context["event"]
         user_id = event["user"]
+        if user_id == "USLACKBOT":
+            return
         profile = await self._slack_api.users.info({"user": user_id})
         text = event["blocks"][0]["elements"][0]["elements"][0]["text"]
         body = {
