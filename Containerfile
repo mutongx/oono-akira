@@ -7,3 +7,5 @@ WORKDIR /root
 COPY oono_akira /root/oono_akira
 
 CMD ["python3", "-m", "oono_akira", "/root/.oono/config.json"]
+
+STOPSIGNAL SIGINT
