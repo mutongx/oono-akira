@@ -3,7 +3,7 @@ import ssl
 import json
 import time
 import websockets
-from typing import Optional
+from collections import deque
 from aiohttp import web
 from aiohttp import ClientSession
 from aiohttp.web_request import Request
@@ -14,6 +14,8 @@ from oono_akira.log import log
 
 
 class OonoAkira:
+
+    PAYLOAD_TRACKER_SIZE = 1024
 
     def __init__(self, config: dict):
 
@@ -36,6 +38,9 @@ class OonoAkira:
         self._web_app = web.Application()
         self._web_app.add_routes([web.get("/oauth", self._oauth_handler)])
         self._web_port = server.get("port", 25472)
+
+        self._payload_queue = deque()
+        self._payload_set = set()
 
     async def __aenter__(self):
 
@@ -95,11 +100,10 @@ class OonoAkira:
                         payload = json.loads(payload_str)
                         self._db.record_payload(f"websocket_{payload['type']}", payload_str)
 
-                        if payload.get("retry_attempt"):
-                            log(f"WebSocket Retry Event: {payload.get('retry_reason')}")
-                            continue
-
                         if payload["type"] == "events_api":
+                            if not self._track_payload(payload["payload"]["event_id"]):
+                                log(f"Duplicate payload: {payload['payload']['event_id']}")
+                                continue
                             ack = await self._process_event(payload["payload"])
                             asyncio.create_task(self._ack_event(conn, payload, ack))
                         elif payload["type"] == "hello":
@@ -115,6 +119,16 @@ class OonoAkira:
 
                 import traceback
                 traceback.print_exc()
+
+    def _track_payload(self, track_id) -> bool:
+        if track_id in self._payload_set:
+            return False
+        self._payload_queue.append(track_id)
+        self._payload_set.add(track_id)
+        if len(self._payload_queue) > self.PAYLOAD_TRACKER_SIZE:
+            item = self._payload_queue.popleft()
+            self._payload_set.remove(item)
+        return True
 
     async def _process_event(self, event):
         ws_info = self._db.get_workspace_info(event["team_id"])
