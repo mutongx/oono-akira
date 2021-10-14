@@ -1,9 +1,12 @@
+import pytz
 from datetime import datetime
 from calendar import monthrange
 from oono_akira.slack import SlackContext
 from oono_akira.modules.__base__ import ModuleBase
 
 class Moyu(ModuleBase):
+
+    TIMEZONE = pytz.timezone("Asia/Shanghai")
 
     @staticmethod
     def check_app_mention(context: SlackContext):
@@ -14,9 +17,13 @@ class Moyu(ModuleBase):
         return f"<@{bot_user_id}>" == text.strip()
 
     @staticmethod
+    def datetime(*args):
+        return datetime(*args, tzinfo=Moyu.TIMEZONE)
+
+    @staticmethod
     def get_message():
 
-        now = datetime.now()
+        now = datetime.now(tz=Moyu.TIMEZONE)
 
         weekday = now.weekday()
         weekday_cn = "一二三四五六日"
@@ -49,10 +56,10 @@ class Moyu(ModuleBase):
         week_perc = (weekday * 24 * 60 + now.hour * 60 + now.minute) / 60 / 24 / 7
         _, days_month = monthrange(now.year, now.month)
         month_perc = (now.day * 60 * 60 + now.hour * 60 + now.minute) / 60 / 60 / days_month
-        days_year = (datetime(now.year + 1, 1, 1) - datetime(now.year, 1, 1)).days
-        year_perc = ((now - datetime(now.year, 1, 1)).days * 24 + now.hour) / days_year / 24
-        days_centry = (datetime(now.year // 100 * 100 + 100, 1, 1) - datetime(now.year // 100 * 100, 1, 1)).days
-        centry_perc = ((now - datetime(now.year // 100 * 100, 1, 1)).days) / days_centry
+        days_year = (Moyu.datetime(now.year + 1, 1, 1) - Moyu.datetime(now.year, 1, 1)).days
+        year_perc = ((now - Moyu.datetime(now.year, 1, 1)).days * 24 + now.hour) / days_year / 24
+        days_centry = (Moyu.datetime(now.year // 100 * 100 + 100, 1, 1) - Moyu.datetime(now.year // 100 * 100, 1, 1)).days
+        centry_perc = ((now - Moyu.datetime(now.year // 100 * 100, 1, 1)).days) / days_centry
         return f"{greeting}，" + \
             f"现在是 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{weekday_cn[weekday]} (CST)\n" + \
             f"\n" + \
