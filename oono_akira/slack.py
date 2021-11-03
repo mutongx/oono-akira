@@ -14,12 +14,12 @@ class SlackAPI:
         },
     }
 
-    def __init__(self, session: ClientSession, auth: Optional[dict] = None, path: Tuple[str] = tuple()):
+    def __init__(self, session: ClientSession, auth: Optional[dict] = None, path: Tuple[str, ...] = tuple()):
         self._session = session
         self._auth = auth
         self._path = path
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str):
         return SlackAPI(self._session, self._auth, self._path + (key,))
 
     async def __call__(self, data=None, **kwargs):
@@ -33,27 +33,24 @@ class SlackAPI:
         api = ".".join(self._path)
         req = self._REQ.get(api, {})
         method = req.get("method", "post")
+        body = {}
         if method == "post":
             mime = req.get("mime", "application/json")
-            headers = {
-                "Content-Type": mime
-            }
+            headers = { "Content-Type": f"{mime}; charset=UTF-8" }
+            if mime == "application/x-www-form-urlencoded":
+                body["data"] = payload
+            elif mime == "application/json":
+                body["json"] = payload
+        elif method == "get":
+            body["params"] = payload
         if self._auth and self._auth.get("token") is not None:
             headers["Authorization"] = f"Bearer {self._auth['token']}"
-        args = {}
-        if method == "get":
-            args["params"] = payload
-        else:
-            if mime == "application/x-www-form-urlencoded":
-                args["data"] = payload
-            elif mime == "application/json":
-                args["json"] = payload
         # Send request
         resp = await self._session.request(
             method,
             f"https://slack.com/api/{api}",
             headers=headers,
-            **args
+            **body
         )
         result = await resp.json()
         if not result.get('ok'):

@@ -1,9 +1,7 @@
-from os import access
 import sqlite3
 import json
 from datetime import datetime
 from contextlib import closing, contextmanager
-from oono_akira.log import log
 
 
 class OonoDatabase:

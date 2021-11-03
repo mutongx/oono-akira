@@ -1,7 +1,7 @@
 import os
 import re
 import importlib
-from typing import List
+from typing import Iterable
 
 from oono_akira.log import log
 
@@ -19,27 +19,30 @@ class ModulesManager:
                 continue
             mod_name = file.split(".")[0]
             mod = importlib.import_module(f"oono_akira.modules.{mod_name}")
+            mod_class = mod.MODULE  # type: ignore
             self._modules[mod_name] = {
                 "module": mod,
-                "class": mod.MODULE,
-                "name": mod.MODULE.__name__
+                "class": mod_class,
+                "name": mod_class.__name__  # type: ignore
             }
             capas = []
-            for func in dir(mod.MODULE):
-                if not (callable(getattr(mod.MODULE, func)) and func.startswith("check_")):
+            for func in dir(mod_class):
+                if not (callable(getattr(mod_class, func)) and func.startswith("check_")):
                     continue
-                capa = func[len("check_"):]
-                capas.append(capa)
-                if capa not in self._capabilities:
-                    self._capabilities[capa] = []
-                self._capabilities[capa].append(mod_name)
+                capability = func[len("check_"):]
+                capas.append(capability)
+                if capability not in self._capabilities:
+                    self._capabilities[capability] = []
+                self._capabilities[capability].append(mod_name)
 
             log(f"Loaded module {mod_name}, class name = {self._modules[mod_name]['name']}, capability = {capas}")
 
         log(f"Loaded module manager at {self._location}")
 
-    def get_capable_modules(self, capa: str) -> List[str]:
-        return self._capabilities.get(capa, [])
+    def iterate_modules(self, capability: str) -> Iterable[dict]:
+        if capability in self._capabilities:
+            for item in self._capabilities[capability]:
+                yield self._modules[item]
 
     def get_module(self, name: str):
         return self._modules.get(name)

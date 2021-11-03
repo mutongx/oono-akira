@@ -2,7 +2,7 @@ import asyncio
 import ssl
 import json
 import time
-import websockets
+import websockets.client
 from collections import deque
 from aiohttp import web
 from aiohttp import ClientSession
@@ -94,7 +94,7 @@ class OonoAkira:
                     time.sleep(5)
                     continue
 
-                async with websockets.connect(conn_url["url"], close_timeout=0) as conn:
+                async with websockets.client.connect(conn_url["url"], close_timeout=0) as conn:
                     async for payload_str in conn:
 
                         payload = json.loads(payload_str)
@@ -144,8 +144,7 @@ class OonoAkira:
             "database": self._db,
         })
         ev_type = event["event"]["type"]
-        for module_name in self._modules.get_capable_modules(ev_type):
-            module = self._modules.get_module(module_name)
+        for module in self._modules.iterate_modules(ev_type):
             check_func = getattr(module["class"], f"check_{ev_type}")
             if check_func(context):
                 break
