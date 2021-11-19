@@ -1,5 +1,6 @@
 import random
 import json
+from typing import Optional
 import aiohttp
 import asyncio
 import unicodedata
@@ -46,7 +47,7 @@ class Idiom(ModuleBase):
         return Idiom.DATA
 
     @staticmethod
-    def check_message(context: SlackContext):
+    def check_message(context: SlackContext) -> Optional[str]:
         text = context["event"].get("text")
         if not text:
             return
@@ -56,12 +57,12 @@ class Idiom(ModuleBase):
             asyncio.create_task(Idiom.get_data())
             with db.get_session(channel=channel) as session:
                 session["status"] = "BEGIN"
-            return True
+            return channel
         elif len(text) == 4 or text == "不会" or text == "不玩了":
             with db.get_session(channel=channel) as session:
                 if session.get("status") != "ONGOING":
-                    return False
-                return True
+                    return
+                return channel
 
     async def process(self):
         event = self._slack_context["event"]

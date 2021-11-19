@@ -1,23 +1,24 @@
+from typing import Optional, Union
 from oono_akira.modules.__base__ import ModuleBase
 from oono_akira.slack import SlackContext
 
 class Strike(ModuleBase):
 
     @staticmethod
-    def check_message(context: SlackContext):
+    def check_message(context: SlackContext) -> Optional[str]:
         blocks = context["event"].get("blocks")
         if not blocks or len(blocks) != 1:
-            return False
+            return
         block = blocks[0]
         elements = block.get("elements")
         if not elements or len(elements) != 1:
-            return False
+            return
         elements = elements[0].get("elements")
         if not elements or len(elements) != 1:
-            return False
+            return
         element = elements[0]
         if element.get("style", {}).get("strike"):
-            return True
+            return ""
 
     async def process(self):
         event = self._slack_context["event"]

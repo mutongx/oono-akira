@@ -1,4 +1,5 @@
 import pytz
+from typing import Optional
 from datetime import datetime
 from calendar import monthrange
 from oono_akira.slack import SlackContext
@@ -9,12 +10,12 @@ class Moyu(ModuleBase):
     TIMEZONE = pytz.timezone("Asia/Shanghai")
 
     @staticmethod
-    def check_app_mention(context: SlackContext):
+    def check_app_mention(context: SlackContext) -> Optional[str]:
         bot_user_id = context["workspace"]["bot"]
         text = context["event"].get("text")
-        if not text:
+        if not text or f"<@{bot_user_id}>" != text.strip():
             return
-        return f"<@{bot_user_id}>" == text.strip()
+        return ""
 
     @staticmethod
     def datetime(*args):

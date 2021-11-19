@@ -146,7 +146,7 @@ class OonoAkira:
         ev_type = event["event"]["type"]
         for module in self._modules.iterate_modules(ev_type):
             check_func = getattr(module["class"], f"check_{ev_type}")
-            if check_func(context):
+            if check_func(context) is not None:
                 break
         else:
             return

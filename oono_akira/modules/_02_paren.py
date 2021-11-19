@@ -1,3 +1,4 @@
+from typing import Optional
 from oono_akira.modules.__base__ import ModuleBase
 from oono_akira.slack import SlackContext
 
@@ -10,7 +11,7 @@ class Paren(ModuleBase):
     }
 
     @staticmethod
-    def check_message(context: SlackContext):
+    def check_message(context: SlackContext) -> Optional[str]:
         text = context["event"].get("text")
         if not text:
             return
@@ -22,7 +23,7 @@ class Paren(ModuleBase):
                 stack.pop()
         if stack:
             context["paren_stack"] = stack
-            return True
+            return ""
 
     async def process(self):
         event = self._slack_context["event"]
