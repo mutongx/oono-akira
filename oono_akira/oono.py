@@ -3,6 +3,7 @@ import ssl
 import json
 import time
 import websockets.client
+from contextlib import AsyncExitStack
 from collections import deque
 from aiohttp import web
 from aiohttp import ClientSession
@@ -47,12 +48,13 @@ class OonoAkira:
         # database
         self._db.initialize()
 
-        # workspace modules
-        self._modules = ModulesManager()
+        self._ack_queue = asyncio.Queue()
 
-        # client
-        self._api_client = ClientSession()
-        self._ws_client = ClientSession(headers={"Authorization": f"Bearer {self._slack_app_token}"})
+        async with AsyncExitStack() as stack:
+            self._api_client = await stack.enter_async_context(ClientSession())
+            self._ws_client = await stack.enter_async_context(ClientSession(headers={"Authorization": f"Bearer {self._slack_app_token}"}))
+            self._modules = await stack.enter_async_context(ModulesManager())
+            self._stack = stack.pop_all()
 
         # server
         self._web_runner = web.AppRunner(self._web_app)
@@ -62,9 +64,10 @@ class OonoAkira:
 
         return self
 
-    async def __aexit__(self, *err):
-        await self._api_client.close()
-        await self._ws_client.close()
+    async def __aexit__(self, *_):
+        await self._web_site.stop()
+        await self._web_runner.cleanup()
+        await self._stack.aclose()
 
     async def _oauth_handler(self, request: Request):
         code = request.rel_url.query["code"]
@@ -95,24 +98,42 @@ class OonoAkira:
                     continue
 
                 async with websockets.client.connect(conn_url["url"], close_timeout=0) as conn:
-                    async for payload_str in conn:
-
-                        payload = json.loads(payload_str)
-                        self._db.record_payload(f"websocket_{payload['type']}", payload_str)
-
-                        if payload["type"] == "events_api":
-                            if not self._track_payload(payload["payload"]["event_id"]):
-                                log(f"Duplicate payload: {payload['payload']['event_id']}")
-                                continue
-                            ack = await self._process_event(payload["payload"])
-                            asyncio.create_task(self._ack_event(conn, payload, ack))
-                        elif payload["type"] == "hello":
-                            log(f"WebSocket connection established, appid = {payload['connection_info']['app_id']}")
-                        elif payload["type"] == "disconnect":
-                            log(f"Received disconnect request, reason: {payload['reason']}")
-                            await conn.close()
-                            break
-
+                    recv = asyncio.create_task(conn.recv())
+                    ack = asyncio.create_task(self._ack_queue.get())
+                    pending = {recv, ack}
+                    while True:
+                        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                        if recv in done:
+                            # Start a new recv task
+                            recv_result = await recv
+                            recv = asyncio.create_task(conn.recv())
+                            pending.add(recv)
+                            # Process recv
+                            payload = json.loads(recv_result)
+                            self._db.record_payload(f"websocket_{payload['type']}", recv_result)
+                            if payload["type"] == "events_api":
+                                if not self._track_payload(payload["payload"]["event_id"]):
+                                    log(f"Duplicate payload: {payload['payload']['event_id']}")
+                                else:
+                                    await self._process_event(payload)
+                            elif payload["type"] == "hello":
+                                log(f"WebSocket connection established, appid = {payload['connection_info']['app_id']}")
+                            elif payload["type"] == "disconnect":
+                                log(f"Received disconnect request, reason: {payload['reason']}")
+                                await conn.close()
+                                break
+                        if ack in done:
+                            # Start a new ack task
+                            ack_result = await ack
+                            ack = asyncio.create_task(self._ack_queue.get())
+                            pending.add(ack)
+                            # Process ack
+                            envelope_id, ack_payload = ack_result
+                            ack_str = json.dumps({
+                                "envelope_id": envelope_id,
+                                "payload": ack_payload
+                            })
+                            asyncio.create_task(conn.send(ack_str))
                 log(f"Disconnected.")
 
             except Exception:
@@ -130,32 +151,33 @@ class OonoAkira:
             self._payload_set.remove(item)
         return True
 
-    async def _process_event(self, event):
+    async def _process_event(self, payload) -> bool:
+        event = payload["payload"]
         ws_info = self._db.get_workspace_info(event["team_id"])
+        # Ignore if event payload is me
         if event.get("event", {}).get("user") == ws_info["bot_id"]:
-            return
+            await self._ack_queue.put((payload["envelope_id"], None))
+            return False
         context = SlackContext({
             "workspace": {
                 "name": ws_info["workspace_name"],
                 "bot": ws_info["bot_id"],
                 "admin": ws_info["admin_id"],
             },
+            "id": payload["envelope_id"],
             "event": event["event"],
             "database": self._db,
         })
         ev_type = event["event"]["type"]
         for module in self._modules.iterate_modules(ev_type):
             check_func = getattr(module["class"], f"check_{ev_type}")
-            if check_func(context) is not None:
+            queue_name = check_func(context)
+            if queue_name is not None:
                 break
         else:
-            return
+            await self._ack_queue.put((payload["envelope_id"], None))
+            return False
+        queue_name = f"{module['name']}/{queue_name}"
         api = SlackAPI(self._api_client, {"token": ws_info["workspace_token"]})
-        return await module["class"](api, context).process()
-
-    async def _ack_event(self, conn, payload, ack):
-        ack_str = json.dumps({
-            "envelope_id": payload["envelope_id"],
-            "payload": ack
-        })
-        await conn.send(ack_str)
+        await self._modules.queue(queue_name, module, api, context, self._ack_queue)
+        return True
