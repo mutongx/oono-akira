@@ -16,6 +16,9 @@ class Idiom(ModuleBase):
     DATA_URL = "https://github.com/pwxcoo/chinese-xinhua/raw/master/data/idiom.json"
     DATA = None
 
+    BYE_TEXT_URL = "https://gist.githubusercontent.com/mutongx/e68ca5f6af54bd9989f11a1b615a8574/raw/sad_huoxing.txt"
+    BYE_TEXT = None
+
     @staticmethod
     async def get_data():
         if Idiom.DATA is None:
@@ -47,6 +50,15 @@ class Idiom(ModuleBase):
         return Idiom.DATA
 
     @staticmethod
+    async def get_bye_text():
+        if Idiom.BYE_TEXT is None:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(Idiom.BYE_TEXT_URL) as resp:
+                    text = await resp.text()
+            Idiom.BYE_TEXT = text.strip().split("\n")
+        return random.choice(Idiom.BYE_TEXT)
+
+    @staticmethod
     def check_message(context: SlackContext) -> Optional[str]:
         text = context["event"].get("text")
         if not text:
@@ -55,6 +67,7 @@ class Idiom(ModuleBase):
         channel = context["event"]["channel"]
         if text == "成语接龙":
             asyncio.create_task(Idiom.get_data())
+            asyncio.create_task(Idiom.get_bye_text())
             with db.get_session(channel=channel) as session:
                 session["status"] = "BEGIN"
             return channel
@@ -83,7 +96,7 @@ class Idiom(ModuleBase):
                 meaning = word["explanation"]
             elif status == "ONGOING":
                 if answer == "不玩了":
-                    text = "哭哭"
+                    text = await self.get_bye_text()
                     session["status"] = "END"
                 elif answer == "不会":
                     begin = session["word"]["pinyin_normalized"][-1]
