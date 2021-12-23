@@ -80,5 +80,10 @@ class ModulesManager:
             if item is None:
                 break
             api, context, ack = item
-            result = await module["class"](api, context).process()  # type: Optional[dict]
+            result = None
+            try:
+                result = await module["class"](api, context).process()  # type: Optional[dict]
+            except Exception:
+                import traceback
+                traceback.print_exc()
             await ack.put((context["id"], result))
