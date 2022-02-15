@@ -68,11 +68,11 @@ class Idiom(ModuleBase):
         if text == "成语接龙":
             asyncio.create_task(Idiom.get_data())
             asyncio.create_task(Idiom.get_bye_text())
-            with db.get_session(channel=channel) as session:
+            with db.get_session(game="idiom", channel=channel) as session:
                 session.data["status"] = "BEGIN"
             return channel
         elif len(text) == 4 or text == "不会" or text == "不玩了":
-            with db.get_session(channel=channel) as session:
+            with db.get_session(game="idiom", channel=channel) as session:
                 if session.data.get("status") != "ONGOING":
                     return
                 return channel
@@ -86,7 +86,7 @@ class Idiom(ModuleBase):
         react = None
         text = None
         meaning = None
-        with database.get_session(channel=channel) as session:
+        with database.get_session(game="idiom", channel=channel) as session:
             status = session.data.get("status")
             if status == "BEGIN":
                 session.data["status"] = "ONGOING"
