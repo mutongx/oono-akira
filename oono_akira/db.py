@@ -4,6 +4,43 @@ from datetime import datetime
 from contextlib import closing, contextmanager
 
 
+class SessionStorage:
+
+    def __init__(self, db: sqlite3.Connection, key: str) -> None:
+        self._db = db
+        self._key = key
+
+    def __enter__(self):
+        self._cursor = self._db.cursor()
+        row = \
+            self._cursor.execute(
+                "SELECT content FROM session WHERE key=:key", {
+                    "key": self._key}
+            ).fetchone()
+        self._data = json.loads(row[0]) if row and row[0] else {}
+        return self
+
+    @property
+    def data(self) -> dict:
+        return self._data
+
+    def __exit__(self, *_, **__):
+        self._cursor.execute("""
+            INSERT INTO session(key, content, updated_at)
+            VALUES (:key, :content, :updated_at)
+            ON CONFLICT(key)
+            DO UPDATE SET
+                content=:content,
+                updated_at=:updated_at
+        """, {
+            "key": self._key,
+            "content": json.dumps(self._data),
+            "updated_at": datetime.now()
+        })
+        self._cursor.close()
+        self._db.commit()
+
+
 class OonoDatabase:
 
     def __init__(self, file: str) -> None:
@@ -93,24 +130,7 @@ class OonoDatabase:
 
     @contextmanager
     def get_session(self, **kwargs):
-        session_key = ",".join(f"{key}={value}" for key, value in sorted(kwargs.items()))
-        with closing(self._db.cursor()) as cur:
-            rows = cur.execute("SELECT content FROM session WHERE key=:key", {"key": session_key})
-            row = rows.fetchone()
-            session_data = json.loads(row[0]) if row is not None else {}
-            try:
-                yield session_data
-            finally:
-                cur.execute("""
-                    INSERT INTO session(key, content, updated_at)
-                    VALUES (:key, :content, :updated_at)
-                    ON CONFLICT(key)
-                    DO UPDATE SET
-                        content=:content,
-                        updated_at=:updated_at
-                """, {
-                    "key": session_key,
-                    "content": json.dumps(session_data),
-                    "updated_at": datetime.now()
-                })
-                self._db.commit()
+        session_key = ",".join(
+            f"{key}={value}" for key, value in sorted(kwargs.items()))
+        with SessionStorage(self._db, session_key) as ss:
+            yield ss

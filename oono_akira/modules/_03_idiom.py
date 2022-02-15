@@ -63,17 +63,17 @@ class Idiom(ModuleBase):
         text = context["event"].get("text")
         if not text:
             return
-        db = context["database"] # type: OonoDatabase
+        db = context["database"]  # type: OonoDatabase
         channel = context["event"]["channel"]
         if text == "成语接龙":
             asyncio.create_task(Idiom.get_data())
             asyncio.create_task(Idiom.get_bye_text())
             with db.get_session(channel=channel) as session:
-                session["status"] = "BEGIN"
+                session.data["status"] = "BEGIN"
             return channel
         elif len(text) == 4 or text == "不会" or text == "不玩了":
             with db.get_session(channel=channel) as session:
-                if session.get("status") != "ONGOING":
+                if session.data.get("status") != "ONGOING":
                     return
                 return channel
 
@@ -81,45 +81,45 @@ class Idiom(ModuleBase):
         event = self._slack_context["event"]
         answer = event["text"]
         channel = event["channel"]
-        database = self._slack_context["database"]
+        database = self._slack_context["database"]  # type: OonoDatabase
         data = await self.get_data()
         react = None
         text = None
         meaning = None
         with database.get_session(channel=channel) as session:
-            status = session.get("status")
+            status = session.data.get("status")
             if status == "BEGIN":
-                session["status"] = "ONGOING"
+                session.data["status"] = "ONGOING"
                 word = random.choice(data["list"])
-                session["word"] = word
+                session.data["word"] = word
                 text = word["word"]
                 meaning = word["explanation"]
             elif status == "ONGOING":
                 if answer == "不玩了":
                     text = await self.get_bye_text()
-                    session["status"] = "END"
+                    session.data["status"] = "END"
                 elif answer == "不会":
-                    begin = session["word"]["pinyin_normalized"][-1]
+                    begin = session.data["word"]["pinyin_normalized"][-1]
                     if begin not in data["begin"]:
                         text = "草，我也不会"
-                        session["status"] = "END"
+                        session.data["status"] = "END"
                     else:
                         word = random.choice(data["begin"][begin])
-                        session["word"] = word
+                        session.data["word"] = word
                         text = word["word"]
                         meaning = word["explanation"]
                 else:
                     match = data["mapping"].get(answer)
-                    if match is None or match["pinyin_normalized"][0] != session["word"]["pinyin_normalized"][-1]:
+                    if match is None or match["pinyin_normalized"][0] != session.data["word"]["pinyin_normalized"][-1]:
                         react = "x"
                     else:
                         begin = match["pinyin_normalized"][-1]
                         if not data["begin"][begin]:
                             text = "给我整不会了"
-                            session["status"] = "END"
+                            session.data["status"] = "END"
                         else:
                             word = random.choice(data["begin"][begin])
-                            session["word"] = word
+                            session.data["word"] = word
                             text = word["word"]
                             meaning = word["explanation"]
             else:
@@ -144,5 +144,6 @@ class Idiom(ModuleBase):
                 "timestamp": event["ts"]
             }
             await self._slack_api.reactions.add(body)
+
 
 MODULE = Idiom
