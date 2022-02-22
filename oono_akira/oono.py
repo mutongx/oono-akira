@@ -27,6 +27,7 @@ class OonoAkira:
             "redirect_uri": slack["redirect_uri"],
         }
         self._slack_app_token = slack["token"]
+        self._slack_permissions = slack["permissions"]
 
         self._db = OonoDatabase(config["db"]["path"])
 
@@ -38,6 +39,7 @@ class OonoAkira:
             self._ssl_context = None
         self._web_app = web.Application()
         self._web_app.add_routes([web.get("/oauth", self._oauth_handler)])
+        self._web_app.add_routes([web.get("/install", self._install_handler)])
         self._web_port = server.get("port", 25472)
 
         self._payload_queue = deque()
@@ -80,6 +82,14 @@ class OonoAkira:
             resp["access_token"])
         self._db.record_payload("oauth_access_token", resp)
         return web.Response(text="Done" if resp["ok"] else "Error")
+
+    async def _install_handler(self, request: Request):
+        auth_uri = "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}".format(
+            self._slack_oauth["client_id"],
+            ",".join(self._slack_permissions),
+            self._slack_oauth["redirect_uri"],
+        )
+        raise web.HTTPFound(auth_uri)
 
     async def run(self):
         while True:

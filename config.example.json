@@ -3,7 +3,13 @@
         "client_id": "1234567890123.1234567890123",
         "client_secret": "0123456789abcdef0123456789abcdef",
         "redirect_uri": "https://localhost:12306/oauth",
-        "token": "xapp-1-ABCDE12345-1234567890123-0123456789abcdef0123456789abcdef"
+        "token": "xapp-1-ABCDE12345-1234567890123-0123456789abcdef0123456789abcdef",
+        "permissions": [
+            "app_mentions:read",
+            "chat:write",
+            "incoming-webhook",
+            "reactions:write"
+        ]
     },
     "server": {
         "ssl": {
