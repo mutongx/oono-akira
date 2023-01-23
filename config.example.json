@@ -18,7 +18,9 @@
             "port": 12306
         }
     },
-    "db": {
-        "path": ".oono/oono.db"
+    "database": {
+        "sqlite": {
+            "path": ".oono/oono.db"
+        }
     }
 }
