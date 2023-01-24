@@ -6,9 +6,9 @@ import traceback
 from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple
 
 from oono_akira.log import log
-from oono_akira.slack import SlackAPI, SlackContext
+from oono_akira.slack import SlackContext
 
-HandlerFunctionType = Callable[[SlackContext, SlackAPI], Awaitable[None]]
+HandlerFunctionType = Callable[[SlackContext], Awaitable[None]]
 HandlerType = Optional[Tuple[str, HandlerFunctionType]]
 HandlerConstructorType = Callable[[SlackContext], HandlerType]
 
@@ -50,7 +50,7 @@ class ModulesManager:
     async def __aenter__(self):
         self._queue: Dict[
             str,
-            asyncio.Queue[Optional[Tuple[SlackContext, SlackAPI, HandlerFunctionType]]],
+            asyncio.Queue[Optional[Tuple[SlackContext, HandlerFunctionType]]],
         ] = {}
         self._future: Dict[str, asyncio.Task[None]] = {}
         return self
@@ -70,11 +70,10 @@ class ModulesManager:
         self,
         name: str,
         context: SlackContext,
-        api: SlackAPI,
         handler_func: HandlerFunctionType,
     ):
         self._ensure_queue(name)
-        await self._queue[name].put((context, api, handler_func))
+        await self._queue[name].put((context, handler_func))
 
     def _ensure_queue(self, name: str):
         if name not in self._queue:
@@ -87,8 +86,8 @@ class ModulesManager:
             item = await queue.get()
             if item is None:
                 break
-            context, api, handler_func = item
+            context, handler_func = item
             try:
-                await handler_func(context, api)
+                await handler_func(context)
             except Exception:
                 traceback.print_exc()
