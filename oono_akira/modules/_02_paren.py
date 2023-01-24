@@ -19,6 +19,7 @@ class ParenContext(SlackContext):
 @register("message")
 def handler(context: SlackContext) -> HandlerType:
     async def process(context: SlackContext):
+        await context["ack"]()
         context = cast(ParenContext, context)
         event = context["event"]
         body = {

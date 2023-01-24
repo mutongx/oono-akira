@@ -80,6 +80,7 @@ def get_message() -> str:
 @register("app_mention")
 def handler(context: SlackContext) -> HandlerType:
     async def process(context: SlackContext):
+        await context["ack"]()
         event = context["event"]
         body = {
             "channel": event["channel"],
