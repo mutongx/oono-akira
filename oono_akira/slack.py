@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, TypedDict, Dict, Any
+from typing import Tuple, Optional, TypedDict, Dict, Any, Awaitable, Protocol
 
 from aiohttp import ClientSession
 
@@ -64,6 +64,11 @@ class SlackAPI:
         return result
 
 
+class SlackAckFunction(Protocol):
+    def __call__(self, body: Any = ..., /) -> Awaitable[None]:
+        ...
+
+
 class SlackWorkspaceContext(TypedDict):
     name: str
     bot_id: str
@@ -73,6 +78,7 @@ class SlackWorkspaceContext(TypedDict):
 class SlackContext(TypedDict):
     api: SlackAPI
     database: OonoDatabase
+    ack: SlackAckFunction
     workspace: SlackWorkspaceContext
     id: str
     event: Any

@@ -5,7 +5,7 @@ import time
 import traceback
 from contextlib import AsyncExitStack
 from collections import deque
-from typing import Deque, Set, Tuple, Any
+from typing import Deque, Dict, Tuple, Any, Optional
 
 import websockets.client
 from aiohttp import web
@@ -50,14 +50,14 @@ class OonoAkira:
         self._web_port = server.get("port", 25472)
 
         self._payload_queue: Deque[str] = deque()
-        self._payload_set: Set[str] = set()
+        self._payload_mapping: Dict[str, Optional[str]] = dict()
 
     async def __aenter__(self):
 
         # database
         self._db.initialize()
 
-        self._ack_queue: asyncio.Queue[Tuple[str, Any]] = asyncio.Queue()
+        self._ack_queue: asyncio.Queue[Tuple[str, str, Any]] = asyncio.Queue()
 
         async with AsyncExitStack() as stack:
             self._api_client = await stack.enter_async_context(ClientSession())
@@ -155,12 +155,19 @@ class OonoAkira:
                                 f"websocket_{payload['type']}", recv_result
                             )
                             if payload["type"] == "events_api":
-                                if not self._track_payload(
-                                    payload["payload"]["event_id"]
-                                ):
-                                    log(
-                                        f"Duplicate payload: {payload['payload']['event_id']}"
-                                    )
+                                event_id = payload["payload"]["event_id"]
+                                envelope_id = payload["envelope_id"]
+                                log(
+                                    f"Received event  {event_id}, envelope_id={envelope_id}"
+                                )
+                                track = self._track_payload(event_id)
+                                if track is not True:
+                                    if track is not None:
+                                        log(
+                                            f"Duplicate event {event_id}. Previously processed by {track}."
+                                        )
+                                    else:
+                                        log(f"Duplicate event {event_id}.")
                                 else:
                                     await self._process_event(payload)
                             elif payload["type"] == "hello":
@@ -179,53 +186,82 @@ class OonoAkira:
                             ack = asyncio.create_task(self._ack_queue.get())
                             pending.add(ack)
                             # Process ack
-                            envelope_id, ack_payload = ack_result
+                            envelope_id, event_id, ack_payload = ack_result
                             ack_str = json.dumps(
                                 {"envelope_id": envelope_id, "payload": ack_payload}
                             )
                             asyncio.create_task(conn.send(ack_str))
+                            log(
+                                f"Acking event    {event_id}, envelope_id={envelope_id}",
+                                debug=True,
+                            )
                 log(f"Disconnected.")
 
             except Exception:
                 traceback.print_exc()
 
-    def _track_payload(self, track_id: str) -> bool:
-        if track_id in self._payload_set:
-            return False
+    def _track_payload(
+        self, track_id: str, processor: Optional[str] = None, update: bool = False
+    ) -> bool | str | None:
+        if update:
+            if track_id not in self._payload_mapping:
+                return False
+            self._payload_mapping[track_id] = processor
+            return True
+        # update == False
+        if track_id in self._payload_mapping:
+            return self._payload_mapping[track_id]
         self._payload_queue.append(track_id)
-        self._payload_set.add(track_id)
+        self._payload_mapping[track_id] = processor
         if len(self._payload_queue) > self.PAYLOAD_TRACKER_SIZE:
             item = self._payload_queue.popleft()
-            self._payload_set.remove(item)
+            del self._payload_mapping[item]
         return True
 
     async def _process_event(self, payload: Any) -> bool:
-        event = payload["payload"]
-        ws_info = self._db.get_workspace_info(event["team_id"])
+        def ack_func(body: Any = None):
+            return self._ack_queue.put(
+                (payload["envelope_id"], payload["payload"]["event_id"], body)
+            )
+
+        event = payload["payload"]["event"]
+        ws_info = self._db.get_workspace_info(payload["payload"]["team_id"])
+
         # Ignore if event payload is me
-        if event.get("event", {}).get("user") == ws_info["bot_id"]:
-            await self._ack_queue.put((payload["envelope_id"], None))
+        if event.get("user") == ws_info["bot_id"]:
+            await ack_func()
             return False
+
+        # Prepare context
         context: SlackContext = {
             "api": SlackAPI(self._api_client, ws_info["workspace_token"]),
             "database": self._db,
+            "ack": ack_func,
             "workspace": {
                 "name": ws_info["workspace_name"],
                 "bot_id": ws_info["bot_id"],
                 "admin_id": ws_info["admin_id"],
             },
             "id": payload["envelope_id"],
-            "event": event["event"],
+            "event": event,
         }
-        ev_type = event["event"]["type"]
-        for constructor in self._modules.iterate_modules(ev_type):
+
+        # Find handler function
+        for constructor in self._modules.iterate_modules(event["type"]):
             handler = constructor(context)
             if handler is not None:
                 break
         else:
-            await self._ack_queue.put((payload["envelope_id"], None))
+            await ack_func()
             return False
+
+        # Enqueue the function
         queue_name, handler_func = handler
         queue_name = f"{handler_func.__module__}/{queue_name}"
         await self._modules.queue(queue_name, context, handler_func)
+
+        self._track_payload(
+            payload["payload"]["event_id"], handler_func.__module__, update=True
+        )
+
         return True
