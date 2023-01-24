@@ -76,6 +76,7 @@ class OonoAkira:
             self._web_runner, port=self._web_port, ssl_context=self._ssl_context
         )
         await self._web_site.start()
+        log(f"Listening on port {self._web_port}")
 
         return self
 
@@ -99,14 +100,18 @@ class OonoAkira:
             resp["access_token"],
         )
         self._db.record_payload("oauth_access_token", resp)
-        return web.Response(text="Done" if resp["ok"] else "Error")
+        log(
+            f"App is installed in workspace {resp['team']['name']}, id = {resp['team']['idT']}"
+        )
+        return web.Response(text="Done")
 
-    async def _install_handler(self, request: Request):
+    async def _install_handler(self, _: Request):
         auth_uri = "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}".format(
             self._slack_oauth["client_id"],
             ",".join(self._slack_permissions),
             self._slack_oauth["redirect_uri"],
         )
+        log(f"Requesting /install, uri = {auth_uri}", debug=True)
         raise web.HTTPFound(auth_uri)
 
     async def run(self):
@@ -204,14 +209,14 @@ class OonoAkira:
         context: SlackContext = {
             "api": SlackAPI(self._api_client, ws_info["workspace_token"]),
             "database": self._db,
-                "workspace": {
-                    "name": ws_info["workspace_name"],
+            "workspace": {
+                "name": ws_info["workspace_name"],
                 "bot_id": ws_info["bot_id"],
                 "admin_id": ws_info["admin_id"],
-                },
-                "id": payload["envelope_id"],
-                "event": event["event"],
-            }
+            },
+            "id": payload["envelope_id"],
+            "event": event["event"],
+        }
         ev_type = event["event"]["type"]
         for constructor in self._modules.iterate_modules(ev_type):
             handler = constructor(context)
