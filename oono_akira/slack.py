@@ -1,6 +1,9 @@
-from oono_akira.log import log
 from typing import Tuple, Optional, TypedDict, Dict, Any
+
 from aiohttp import ClientSession
+
+from oono_akira.db import OonoDatabase
+from oono_akira.log import log
 
 
 AnyDict = Dict[Any, Any]
@@ -31,7 +34,7 @@ class SlackAPI:
     def __getattr__(self, key: str):
         return SlackAPI(self._session, self._token, self._path + (key,))
 
-    async def __call__(self, __data: Optional[AnyDict] = None, **kwargs: AnyDict):
+    async def __call__(self, __data: Optional[AnyDict] = None, **kwargs: Any):
         # Prepare request payload
         payload: AnyDict = dict(**__data if __data else {}, **kwargs)
         headers: AnyDict = {}
@@ -61,5 +64,15 @@ class SlackAPI:
         return result
 
 
+class SlackWorkspaceContext(TypedDict):
+    name: str
+    bot_id: str
+    admin_id: str
+
+
 class SlackContext(TypedDict):
-    pass
+    api: SlackAPI
+    database: OonoDatabase
+    workspace: SlackWorkspaceContext
+    id: str
+    event: Any

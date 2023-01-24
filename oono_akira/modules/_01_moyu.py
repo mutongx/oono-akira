@@ -3,7 +3,7 @@ from typing import Any
 from datetime import datetime
 from calendar import monthrange
 
-from oono_akira.slack import SlackContext, SlackAPI
+from oono_akira.slack import SlackContext
 from oono_akira.modules import register, HandlerType
 
 
@@ -79,7 +79,7 @@ def get_message() -> str:
 
 @register("app_mention")
 def handler(context: SlackContext) -> HandlerType:
-    async def process(context: SlackContext, api: SlackAPI):
+    async def process(context: SlackContext):
         event = context["event"]
         body = {
             "channel": event["channel"],
@@ -87,9 +87,9 @@ def handler(context: SlackContext) -> HandlerType:
         }
         if "thread_ts" in event:
             body["thread_ts"] = event["thread_ts"]
-        await api.chat.postMessage(body)
+        await context["api"].chat.postMessage(body)
 
-    bot_user_id = context["workspace"]["bot"]
+    bot_user_id = context["workspace"]["bot_id"]
     text = context["event"].get("text")
     if not text or f"<@{bot_user_id}>" != text.strip():
         return

@@ -201,28 +201,26 @@ class OonoAkira:
         if event.get("event", {}).get("user") == ws_info["bot_id"]:
             await self._ack_queue.put((payload["envelope_id"], None))
             return False
-        context = SlackContext(
-            {
+        context: SlackContext = {
+            "api": SlackAPI(self._api_client, ws_info["workspace_token"]),
+            "database": self._db,
                 "workspace": {
                     "name": ws_info["workspace_name"],
-                    "bot": ws_info["bot_id"],
-                    "admin": ws_info["admin_id"],
+                "bot_id": ws_info["bot_id"],
+                "admin_id": ws_info["admin_id"],
                 },
                 "id": payload["envelope_id"],
                 "event": event["event"],
-                "database": self._db,
             }
-        )
         ev_type = event["event"]["type"]
-        for module in self._modules.iterate_modules(ev_type):
-            check_func = getattr(module["class"], f"check_{ev_type}")
-            queue_name = check_func(context)
-            if queue_name is not None:
+        for constructor in self._modules.iterate_modules(ev_type):
+            handler = constructor(context)
+            if handler is not None:
                 break
         else:
             await self._ack_queue.put((payload["envelope_id"], None))
             return False
-        queue_name = f"{module['name']}/{queue_name}"
-        api = SlackAPI(self._api_client, {"token": ws_info["workspace_token"]})
-        await self._modules.queue(queue_name, module, api, context, self._ack_queue)
+        queue_name, handler_func = handler
+        queue_name = f"{handler_func.__module__}/{queue_name}"
+        await self._modules.queue(queue_name, context, handler_func)
         return True
