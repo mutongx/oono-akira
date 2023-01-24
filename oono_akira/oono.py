@@ -173,6 +173,9 @@ class OonoAkira:
                                         log(f"Duplicate event {event_id}.")
                                 else:
                                     handler_name = await self._process_event(payload)
+                                    log(
+                                        f"Handled event   {event_id}, handler={handler_name}"
+                                    )
                                     self._track_payload(event_id, handler_name, True)
                             elif payload["type"] == "hello":
                                 log(
@@ -257,9 +260,6 @@ class OonoAkira:
         for constructor in self._modules.iterate_modules(event["type"]):
             handler = constructor(context)
             if handler is not None:
-                log(
-                    f"Handling event  {payload['payload']['event_id']}, module={handler.__module__}"
-                )
                 break
         else:
             await ack_func()
