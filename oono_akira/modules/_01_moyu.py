@@ -77,8 +77,14 @@ def get_message() -> str:
     )
 
 
+def should_handle(context: SlackContext) -> bool:
+    bot_user_id = context["workspace"]["bot_id"]
+    text = context["event"].get("text")
+    return text and text.strip() == f"<@{bot_user_id}>"
+
+
 @register("app_mention")
-def handler(context: SlackContext) -> HandlerType:
+def app_mention_handler(context: SlackContext) -> HandlerType:
     async def process(context: SlackContext):
         await context["ack"]()
         event = context["event"]
@@ -90,8 +96,14 @@ def handler(context: SlackContext) -> HandlerType:
             body["thread_ts"] = event["thread_ts"]
         await context["api"].chat.postMessage(body)
 
-    bot_user_id = context["workspace"]["bot_id"]
-    text = context["event"].get("text")
-    if not text or f"<@{bot_user_id}>" != text.strip():
-        return
-    return "", process
+    if should_handle(context):
+        return "", process
+
+
+@register("message")
+def message_handler(context: SlackContext) -> HandlerType:
+    async def process(context: SlackContext):
+        await context["ack"]()
+
+    if should_handle(context):
+        return "", process
