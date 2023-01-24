@@ -4,7 +4,7 @@ from datetime import datetime
 from contextlib import closing, contextmanager
 from typing import Any, Dict
 
-from oono_akira.type import DatabaseConfiguration
+from oono_akira.config import DatabaseConfiguration
 
 
 class SessionStorage:

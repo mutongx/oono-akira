@@ -12,7 +12,7 @@ from aiohttp import web
 from aiohttp import ClientSession
 from aiohttp.web_request import Request
 
-from oono_akira.type import Configuration
+from oono_akira.config import Configuration
 from oono_akira.db import OonoDatabase
 from oono_akira.slack import SlackAPI, SlackContext
 from oono_akira.modules import ModulesManager
