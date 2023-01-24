@@ -3,7 +3,7 @@ import json
 import asyncio
 
 from oono_akira.oono import OonoAkira
-from oono_akira.type import Configuration
+from oono_akira.config import Configuration
 
 
 async def amain(config: Configuration):
