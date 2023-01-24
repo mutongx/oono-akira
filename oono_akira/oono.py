@@ -1,22 +1,21 @@
 import asyncio
-import ssl
 import json
+import ssl
 import time
 import traceback
-from contextlib import AsyncExitStack
 from collections import deque
-from typing import Deque, Dict, Tuple, Any, Optional
+from contextlib import AsyncExitStack
+from typing import Any, Deque, Dict, Optional, Tuple
 
 import websockets.client
-from aiohttp import web
-from aiohttp import ClientSession
+from aiohttp import ClientSession, web
 from aiohttp.web_request import Request
 
 from oono_akira.config import Configuration
 from oono_akira.db import OonoDatabase
-from oono_akira.slack import SlackAPI, SlackContext
-from oono_akira.modules import ModulesManager
 from oono_akira.log import log
+from oono_akira.modules import ModulesManager
+from oono_akira.slack import SlackAPI, SlackContext
 
 
 class OonoAkira:

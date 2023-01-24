@@ -1,9 +1,9 @@
-import sys
-import json
 import asyncio
+import json
+import sys
 
-from oono_akira.oono import OonoAkira
 from oono_akira.config import Configuration
+from oono_akira.oono import OonoAkira
 
 
 async def amain(config: Configuration):

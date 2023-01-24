@@ -2,7 +2,6 @@ import os
 import sys
 from datetime import datetime
 
-
 DEBUG = os.environ.get("OONO_DEBUG") in {"1", "ON"}
 
 

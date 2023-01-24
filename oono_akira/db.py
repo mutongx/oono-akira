@@ -1,7 +1,7 @@
-import sqlite3
 import json
-from datetime import datetime
+import sqlite3
 from contextlib import closing, contextmanager
+from datetime import datetime
 from typing import Any, Dict
 
 from oono_akira.config import DatabaseConfiguration

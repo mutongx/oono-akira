@@ -1,10 +1,9 @@
-from typing import Tuple, Optional, TypedDict, Dict, Any, Awaitable, Protocol
+from typing import Any, Awaitable, Dict, Optional, Protocol, Tuple, TypedDict
 
 from aiohttp import ClientSession
 
 from oono_akira.db import OonoDatabase
 from oono_akira.log import log
-
 
 AnyDict = Dict[Any, Any]
 
