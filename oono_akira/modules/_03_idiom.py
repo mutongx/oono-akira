@@ -70,6 +70,7 @@ def handler(context: SlackContext) -> HandlerType:
 
 
 async def process(context: SlackContext):
+    context["ack"]()
     event = context["event"]
     answer = event["text"]
     channel = event["channel"]
