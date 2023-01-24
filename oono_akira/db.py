@@ -160,7 +160,7 @@ class OonoDatabase:
         }
 
     @contextmanager
-    def get_session(self, **kwargs: Dict[str, str]):
+    def get_session(self, **kwargs: Any):
         session_key = ",".join(
             f"{key}={value}" for key, value in sorted(kwargs.items())
         )
