@@ -150,7 +150,7 @@ class OonoDatabase:
             )
             row = rows.fetchone()
             if row is None:
-                raise ValueError("Unauthorized workspace {}".format(workspace_id))
+                return
             name, bot, admin, token = row
         return {
             "workspace_name": name,

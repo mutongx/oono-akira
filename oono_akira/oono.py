@@ -225,10 +225,13 @@ class OonoAkira:
                 (payload["envelope_id"], payload["payload"]["event_id"], body)
             )
 
-        event = payload["payload"]["event"]
         ws_info = self._db.get_workspace_info(payload["payload"]["team_id"])
+        if ws_info is None:
+            await ack_func()
+            return "unknown_workspace"
 
         # Ignore if event payload is me
+        event = payload["payload"]["event"]
         if event.get("user") == ws_info["bot_id"]:
             await ack_func()
             return "ignore_self"
