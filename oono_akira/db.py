@@ -14,9 +14,10 @@ class SessionStorage:
 
     def __enter__(self):
         self._cursor = self._db.cursor()
-        row = self._cursor.execute(
+        self._cursor.execute(
             "SELECT content FROM session WHERE key=:key", {"key": self._key}
-        ).fetchone()
+        )
+        row = self._cursor.fetchone()
         self._data: Any = json.loads(row[0]) if row and row[0] else {}
         return self
 
