@@ -33,7 +33,7 @@ class SlackAPI:
     def __getattr__(self, key: str):
         return SlackAPI(self._session, self._token, self._path + (key,))
 
-    async def __call__(self, __data: Optional[AnyDict] = None, **kwargs: Any):
+    async def __call__(self, __data: Optional[AnyDict] = None, **kwargs: Any) -> Any:
         # Prepare request payload
         payload: AnyDict = dict(**__data if __data else {}, **kwargs)
         headers: AnyDict = {}
@@ -63,6 +63,30 @@ class SlackAPI:
         return result
 
 
+class SlackEvent(TypedDict):
+    type: str
+    user: str
+    text: str
+    channel: str
+    ts: str
+    thread_ts: str
+    blocks: Any
+
+
+class SlackEventPayload(TypedDict):
+    team_id: str
+    event_id: str
+    event: SlackEvent
+    type: str
+
+
+class SlackWebSocketEventPayload(TypedDict):
+    payload: SlackEventPayload
+    envelope_id: str
+    type: str
+    accepts_response_payload: bool
+
+
 class SlackAckFunction(Protocol):
     def __call__(self, body: Any = ..., /) -> Awaitable[None]:
         ...
@@ -80,4 +104,4 @@ class SlackContext(TypedDict):
     ack: SlackAckFunction
     workspace: SlackWorkspaceContext
     id: str
-    event: Any
+    event: SlackEvent

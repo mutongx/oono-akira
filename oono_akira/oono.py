@@ -15,7 +15,7 @@ from oono_akira.config import Configuration
 from oono_akira.db import OonoDatabase
 from oono_akira.log import log
 from oono_akira.modules import ModulesManager
-from oono_akira.slack import SlackAPI, SlackContext
+from oono_akira.slack import SlackAPI, SlackContext, SlackWebSocketEventPayload
 
 
 class OonoAkira:
@@ -219,7 +219,7 @@ class OonoAkira:
             del self._payload_mapping[item]
         return True
 
-    async def _process_event(self, payload: Any) -> str:
+    async def _process_event(self, payload: SlackWebSocketEventPayload) -> str:
         def ack_func(body: Any = None):
             return self._ack_queue.put(
                 (payload["envelope_id"], payload["payload"]["event_id"], body)

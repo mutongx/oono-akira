@@ -2,7 +2,7 @@ import json
 import sqlite3
 from contextlib import closing, contextmanager
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from oono_akira.config import DatabaseConfiguration
 
@@ -160,7 +160,7 @@ class OonoDatabase:
         }
 
     @contextmanager
-    def get_session(self, **kwargs: Any):
+    def get_session(self, **kwargs: str):
         session_key = ",".join(
             f"{key}={value}" for key, value in sorted(kwargs.items())
         )

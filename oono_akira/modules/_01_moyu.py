@@ -79,7 +79,7 @@ def get_message() -> str:
 def should_handle(context: SlackContext) -> bool:
     bot_user_id = context["workspace"]["bot_id"]
     text = context["event"].get("text")
-    return text and text.strip() == f"<@{bot_user_id}>"
+    return bool(text) and text.strip() == f"<@{bot_user_id}>"
 
 
 @register("app_mention")
