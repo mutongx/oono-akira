@@ -100,7 +100,7 @@ class OonoAkira:
         )
         self._db.record_payload("oauth_access_token", resp)
         log(
-            f"App is installed in workspace {resp['team']['name']}, id = {resp['team']['idT']}"
+            f"App is installed in workspace {resp['team']['name']}, id = {resp['team']['id']}"
         )
         return web.Response(text="Done")
 
