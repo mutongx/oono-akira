@@ -5,7 +5,7 @@ from oono_akira.slack import SlackContext
 @register("message")
 def handler(context: SlackContext) -> HandlerType:
     async def process(context: SlackContext):
-        context["ack"]()
+        await context["ack"]()
         event = context["event"]
         user_id = event["user"]
         if user_id == "USLACKBOT":
