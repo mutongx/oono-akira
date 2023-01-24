@@ -169,7 +169,8 @@ class OonoAkira:
                                     else:
                                         log(f"Duplicate event {event_id}.")
                                 else:
-                                    await self._process_event(payload)
+                                    handler_name = await self._process_event(payload)
+                                    self._track_payload(event_id, handler_name, True)
                             elif payload["type"] == "hello":
                                 log(
                                     f"WebSocket connection established, appid = {payload['connection_info']['app_id']}"
@@ -218,7 +219,7 @@ class OonoAkira:
             del self._payload_mapping[item]
         return True
 
-    async def _process_event(self, payload: Any) -> bool:
+    async def _process_event(self, payload: Any) -> str:
         def ack_func(body: Any = None):
             return self._ack_queue.put(
                 (payload["envelope_id"], payload["payload"]["event_id"], body)
@@ -230,7 +231,7 @@ class OonoAkira:
         # Ignore if event payload is me
         if event.get("user") == ws_info["bot_id"]:
             await ack_func()
-            return False
+            return "ignore_self"
 
         # Prepare context
         context: SlackContext = {
@@ -253,15 +254,12 @@ class OonoAkira:
                 break
         else:
             await ack_func()
-            return False
+            print(payload)
+            return "no_handler"
 
         # Enqueue the function
         queue_name, handler_func = handler
         queue_name = f"{handler_func.__module__}/{queue_name}"
         await self._modules.queue(queue_name, context, handler_func)
 
-        self._track_payload(
-            payload["payload"]["event_id"], handler_func.__module__, update=True
-        )
-
-        return True
+        return handler_func.__module__
