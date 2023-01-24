@@ -86,23 +86,24 @@ class OonoAkira:
 
     async def _oauth_handler(self, request: Request):
         code = request.rel_url.query["code"]
-        resp = await SlackAPI(self._api_client).oauth.v2.access(
+        auth_resp = await SlackAPI(self._api_client).oauth.v2.access(
             code=code, **self._slack_oauth
         )
-        if not resp["ok"]:
-            return web.Response(text=resp["error"])
+        if not auth_resp["ok"]:
+            return web.Response(text=auth_resp["error"])
         self._db.add_workspace(
-            resp["team"]["id"],
-            resp["team"]["name"],
-            resp["bot_user_id"],
-            resp["authed_user"]["id"],
-            resp["access_token"],
+            auth_resp["team"]["id"],
+            auth_resp["team"]["name"],
+            auth_resp["bot_user_id"],
+            auth_resp["authed_user"]["id"],
+            auth_resp["access_token"],
         )
-        self._db.record_payload("oauth_access_token", resp)
+        self._db.record_payload("oauth_access_token", auth_resp)
         log(
-            f"App is installed in workspace {resp['team']['name']}, id = {resp['team']['id']}"
+            f"App is installed in workspace {auth_resp['team']['name']}, id = {auth_resp['team']['id']}"
         )
-        return web.Response(text="Done")
+        test_resp = await SlackAPI(self._api_client, token=auth_resp["access_token"]).auth.test()
+        return web.HTTPFound(test_resp["url"])
 
     async def _install_handler(self, _: Request):
         auth_uri = "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}".format(
@@ -253,7 +254,6 @@ class OonoAkira:
                 break
         else:
             await ack_func()
-            print(payload)
             return "no_handler"
 
         # Enqueue the function
