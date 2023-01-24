@@ -1,6 +1,6 @@
-from oono_akira.modules.__base__ import ModuleBase
+from oono_akira.modules import register
 
-class Loader(ModuleBase):
-    pass
 
-MODULE = Loader
+@register("message")
+def null(*_):
+    return

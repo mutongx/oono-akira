@@ -1,38 +1,36 @@
-from typing import Optional
-from oono_akira.modules.__base__ import ModuleBase
-from oono_akira.slack import SlackContext
+from oono_akira.slack import SlackContext, SlackAPI
+from oono_akira.modules import register, HandlerType
 
-class Paren(ModuleBase):
 
-    _L = "([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲⏜⎴⏞⏠﹁﹃︹︻︗︿︽﹇︷"
-    _R = ")]}）］｝⦆〛⦄”’›»」〉》】〕⦘』〗〙｣⟧⟩⟫⟯⟭⌉⌋⦈⦊❜❞❩❫❵❭❯❱❳⏝⎵⏟⏡﹂﹄︺︼︘﹀︾﹈︸"
-    _MAPPING = {
-        l: r for l, r in zip(_L, _R)
-    }
+_L = "([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲⏜⎴⏞⏠﹁﹃︹︻︗︿︽﹇︷"
+_R = ")]}）］｝⦆〛⦄”’›»」〉》】〕⦘』〗〙｣⟧⟩⟫⟯⟭⌉⌋⦈⦊❜❞❩❫❵❭❯❱❳⏝⎵⏟⏡﹂﹄︺︼︘﹀︾﹈︸"
 
-    @staticmethod
-    def check_message(context: SlackContext) -> Optional[str]:
-        text = context["event"].get("text")
-        if not text:
-            return
-        stack = []
-        for char in text:
-            if char in Paren._MAPPING:
-                stack.append(Paren._MAPPING[char])
-            elif stack and stack[-1] == char:
-                stack.pop()
-        if stack:
-            context["paren_stack"] = stack
-            return ""
+assert len(_L) == len(_R)
 
-    async def process(self):
-        event = self._slack_context["event"]
+PAREN_MAPPING = {l: r for l, r in zip(_L, _R)}
+
+
+@register("message")
+def handler(context: SlackContext) -> HandlerType:
+    async def process(context: SlackContext, api: SlackAPI):
+        event = context["event"]
         body = {
             "channel": event["channel"],
-            "text": "".join(reversed(self._slack_context["paren_stack"])) + " ○(￣^￣○)",
+            "text": "".join(reversed(context["paren_stack"])) + " ○(￣^￣○)",
         }
         if "thread_ts" in event:
             body["thread_ts"] = event["thread_ts"]
-        await self._slack_api.chat.postMessage(body)
+        await api.chat.postMessage(body)
 
-MODULE = Paren
+    text = context["event"].get("text")
+    if not text:
+        return
+    stack = []
+    for char in text:
+        if char in PAREN_MAPPING:
+            stack.append(PAREN_MAPPING[char])
+        elif stack and stack[-1] == char:
+            stack.pop()
+    if stack:
+        context["paren_stack"] = stack
+        return "", process
