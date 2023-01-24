@@ -102,7 +102,9 @@ class OonoAkira:
         log(
             f"App is installed in workspace {auth_resp['team']['name']}, id = {auth_resp['team']['id']}"
         )
-        test_resp = await SlackAPI(self._api_client, token=auth_resp["access_token"]).auth.test()
+        test_resp = await SlackAPI(
+            self._api_client, token=auth_resp["access_token"]
+        ).auth.test()
         return web.HTTPFound(test_resp["url"])
 
     async def _install_handler(self, _: Request):
@@ -158,7 +160,8 @@ class OonoAkira:
                                 event_id = payload["payload"]["event_id"]
                                 envelope_id = payload["envelope_id"]
                                 log(
-                                    f"Received event  {event_id}, envelope_id={envelope_id}"
+                                    f"Received event  {event_id}, envelope_id={envelope_id}",
+                                    debug=True,
                                 )
                                 track = self._track_payload(event_id)
                                 if track is not True:
@@ -254,6 +257,9 @@ class OonoAkira:
         for constructor in self._modules.iterate_modules(event["type"]):
             handler = constructor(context)
             if handler is not None:
+                log(
+                    f"Handling event  {payload['payload']['event_id']}, module={handler.__module__}"
+                )
                 break
         else:
             await ack_func()
