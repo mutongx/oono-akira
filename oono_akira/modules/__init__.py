@@ -3,49 +3,53 @@ import importlib
 import os
 import re
 import traceback
-from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple
+from collections import OrderedDict
+from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple, OrderedDict, TypedDict, NotRequired
 
 from oono_akira.log import log
 from oono_akira.slack import SlackContext
 
 HandlerFunctionType = Callable[[SlackContext], Awaitable[None]]
-HandlerType = Optional[Tuple[str, HandlerFunctionType]]
+HandlerOptionType = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
+HandlerType = Optional[Tuple[HandlerFunctionType, HandlerOptionType]]
 HandlerConstructorType = Callable[[SlackContext], HandlerType]
 
 
-def register(type: str) -> Callable[[HandlerConstructorType], HandlerConstructorType]:
-    def make(type: str, func: HandlerConstructorType):
-        if type not in ModulesManager.CAPABILITIES:
-            ModulesManager.CAPABILITIES[type] = []
-        if func.__module__ not in ModulesManager.CAPABILITIES_MAPPING:
-            ModulesManager.CAPABILITIES_MAPPING[func.__module__] = {}
-        ModulesManager.CAPABILITIES[type].append(func)
-        ModulesManager.CAPABILITIES_MAPPING[func.__module__][type] = func
-        return func
-
-    return lambda func: make(type, func)
-
-
 class ModulesManager:
-
     CAPABILITIES: Dict[str, List[HandlerConstructorType]] = {}
     CAPABILITIES_MAPPING: Dict[str, Dict[str, HandlerConstructorType]] = {}
 
-    def __init__(self) -> None:
-        self._location = os.path.dirname(__file__)
+    @staticmethod
+    def register(type: str) -> Callable[[HandlerConstructorType], HandlerConstructorType]:
+        def make(type: str, func: HandlerConstructorType):
+            if type not in ModulesManager.CAPABILITIES:
+                ModulesManager.CAPABILITIES[type] = []
+            if func.__module__ not in ModulesManager.CAPABILITIES_MAPPING:
+                ModulesManager.CAPABILITIES_MAPPING[func.__module__] = {}
+            ModulesManager.CAPABILITIES[type].append(func)
+            ModulesManager.CAPABILITIES_MAPPING[func.__module__][type] = func
+            return func
 
-        for file in sorted(os.listdir(self._location)):
+        return lambda func: make(type, func)
+
+    def __init__(self) -> None:
+        modules: OrderedDict[str, str] = OrderedDict()
+        location = os.path.dirname(__file__)
+        for file in sorted(os.listdir(location)):
             if "__" in file:
                 continue
-            if not re.fullmatch(r"_[0-9a-z_]+\.py", file):
+            match = re.fullmatch(r"(_[0-9]+_([0-9a-z_]+))\.py", file)
+            if not match:
                 continue
-            mod_name, _, _ = file.rpartition(".")
-            mod = importlib.import_module(f"oono_akira.modules.{mod_name}")
-            log(
-                f"Loaded module {mod_name}, capability = {sorted(self.CAPABILITIES_MAPPING[mod.__name__])}"
-            )
-
-        log(f"Finished loading module at {self._location}")
+            mod_name = match.group(2)
+            mod_import = f"oono_akira.modules.{match.group(1)}"
+            if mod_name in modules:
+                raise RuntimeError(f"duplicate module name: {mod_name}")
+            modules[mod_name] = mod_import
+        for mod_name, mod_import in modules.items():
+            mod = importlib.import_module(mod_import)
+            log(f"Loaded module {mod_name}, capability = {sorted(self.CAPABILITIES_MAPPING[mod.__name__])}")
+        log(f"Finished loading module at {location}")
 
     async def __aenter__(self):
         self._queue: Dict[
@@ -91,3 +95,6 @@ class ModulesManager:
                 await handler_func(context)
             except Exception:
                 traceback.print_exc()
+
+
+register = ModulesManager.register

@@ -12,7 +12,6 @@ async def amain(config: Configuration):
 
 
 if __name__ == "__main__":
-
     config_path = sys.argv[1]
     with open(config_path) as f:
         config = json.load(f)
