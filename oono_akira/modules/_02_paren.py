@@ -13,7 +13,7 @@ PAREN_MAPPING = {l: r for l, r in zip(_L, _R)}
 
 
 @register("message")
-def handler(context: SlackContext) -> HandlerType:
+def handler(context: SlackContext, locked: bool) -> HandlerType:
     if context.event.bot_id:
         return
     if not context.event.text:

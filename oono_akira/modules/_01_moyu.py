@@ -71,7 +71,7 @@ def get_message() -> str:
 
 
 @register("message")
-def message_handler(context: SlackContext) -> HandlerType:
+def message_handler(context: SlackContext, locked: bool) -> HandlerType:
     if context.event.bot_id:
         return
     if not context.event.text:
@@ -85,7 +85,7 @@ def message_handler(context: SlackContext) -> HandlerType:
 
 
 @register("app_mention")
-def app_mention_handler(context: SlackContext) -> HandlerType:
+def app_mention_handler(context: SlackContext, locked: bool) -> HandlerType:
     if context.event.bot_id:
         return
     if not context.event.text:

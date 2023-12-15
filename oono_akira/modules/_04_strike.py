@@ -3,7 +3,7 @@ from oono_akira.slack import SlackContext
 
 
 @register("message")
-def handler(context: SlackContext) -> HandlerType:
+def handler(context: SlackContext, locked: bool) -> HandlerType:
     if context.event.bot_id:
         return
     blocks = context.event.blocks
