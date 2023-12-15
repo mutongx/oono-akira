@@ -200,27 +200,26 @@ class OonoAkira:
             await ack()
             return "unknown_workspace"
 
-        # Ignore if event payload is me
         event = payload.event
         if event.user == workspace.botId:
             await ack()
             return "ignore_self"
 
-        # Prepare context
+        locks = await self._db.get_locks(workspace.id, event.channel)        
+
         context = SlackContext(
             id=envelope_id,
             api=SlackAPI(self._client, workspace.token),
             db=self._db,
             ack=ack,
-            locked=False,
             workspace=workspace,
             event=event,
             data=None,
         )
 
         # Find handler function
-        for constructor in self._modules.iterate_modules(event.type):
-            handler = constructor(context)
+        for module, constructor in self._modules.iterate_modules(event.type):
+            handler = constructor(context, module in locks)
             if handler is not None:
                 break
         else:
@@ -230,6 +229,12 @@ class OonoAkira:
         # Enqueue the function
         handler_func, option = handler
         queue_name = f"{handler_func.__module__}/{option.get('queue', '__default__')}"
-        await self._modules.queue(queue_name, context, handler_func)
+        async def callback():
+            if "lock" in option:
+                if option["lock"]:
+                    await self._db.acquire_lock(workspace.id, event.channel, module)
+                else:
+                    await self._db.release_lock(workspace.id, event.channel, module)
+        await self._modules.queue(queue_name, context, handler_func, callback)
 
         return handler_func.__module__

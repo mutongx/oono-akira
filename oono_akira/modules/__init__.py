@@ -9,10 +9,11 @@ from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple, O
 from oono_akira.log import log
 from oono_akira.slack import SlackContext
 
+CallbackFunctionType = Callable[[], Awaitable[None]]
 HandlerFunctionType = Callable[[SlackContext], Awaitable[None]]
 HandlerOptionType = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
 HandlerType = Optional[Tuple[HandlerFunctionType, HandlerOptionType]]
-HandlerConstructorType = Callable[[SlackContext], HandlerType]
+HandlerConstructorType = Callable[[SlackContext, bool], HandlerType]
 
 
 class ModulesManager:
@@ -33,6 +34,9 @@ class ModulesManager:
         return lambda func: make(type, func)
 
     def __init__(self) -> None:
+        # Module import to module name
+        self._modules_mapping: Dict[str, str] = {}
+        # Module name to module import
         modules: OrderedDict[str, str] = OrderedDict()
         location = os.path.dirname(__file__)
         for file in sorted(os.listdir(location)):
@@ -48,13 +52,14 @@ class ModulesManager:
             modules[mod_name] = mod_import
         for mod_name, mod_import in modules.items():
             mod = importlib.import_module(mod_import)
+            self._modules_mapping[mod_import] = mod_name
             log(f"Loaded module {mod_name}, capability = {sorted(self.CAPABILITIES_MAPPING[mod.__name__])}")
         log(f"Finished loading module at {location}")
 
     async def __aenter__(self):
         self._queue: Dict[
             str,
-            asyncio.Queue[Optional[Tuple[SlackContext, HandlerFunctionType]]],
+            asyncio.Queue[Optional[Tuple[SlackContext, HandlerFunctionType, CallbackFunctionType | None]]],
         ] = {}
         self._future: Dict[str, asyncio.Task[None]] = {}
         return self
@@ -65,19 +70,20 @@ class ModulesManager:
         for future in self._future.values():
             await future
 
-    def iterate_modules(self, capability: str) -> Iterable[HandlerConstructorType]:
+    def iterate_modules(self, capability: str) -> Iterable[Tuple[str, HandlerConstructorType]]:
         if capability in self.CAPABILITIES:
             for item in self.CAPABILITIES[capability]:
-                yield item
+                yield self._modules_mapping[item.__module__], item
 
     async def queue(
         self,
         name: str,
         context: SlackContext,
         handler_func: HandlerFunctionType,
+        callback_func: CallbackFunctionType,
     ):
         self._ensure_queue(name)
-        await self._queue[name].put((context, handler_func))
+        await self._queue[name].put((context, handler_func, callback_func))
 
     def _ensure_queue(self, name: str):
         if name not in self._queue:
@@ -90,9 +96,11 @@ class ModulesManager:
             item = await queue.get()
             if item is None:
                 break
-            context, handler_func = item
+            context, handler_func, callback_func = item
             try:
                 await handler_func(context)
+                if callback_func:
+                    await callback_func()
             except Exception:
                 traceback.print_exc()
 

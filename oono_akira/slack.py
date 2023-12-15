@@ -131,7 +131,6 @@ class SlackContext:
     api: SlackAPI
     db: OonoDatabase
     ack: SlackAckFunction
-    locked: bool
     workspace: Workspace
     event: SlackEvent
     data: Any

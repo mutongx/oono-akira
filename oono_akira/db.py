@@ -54,21 +54,22 @@ class OonoDatabase:
     async def get_workspace(self, id: str):
         return await self._client.workspace.find_unique({"id": id})
 
-    async def lock(self, workspace: str, channel: str, module: str):
+    async def acquire_lock(self, workspace: str, channel: str, module: str):
         return await self._client.lock.upsert(
             {"workspace_channel_module": {"workspace": workspace, "channel": channel, "module": module}},
             {"create": {"workspace": workspace, "channel": channel, "module": module}, "update": {}},
         )
 
-    async def unlock(self, workspace: str, channel: str, module: str):
+    async def release_lock(self, workspace: str, channel: str, module: str):
         return await self._client.lock.delete(
             {"workspace_channel_module": {"workspace": workspace, "channel": channel, "module": module}}
         )
 
-    async def get_lock(self, workspace: str, channel: str, module: str):
-        return await self._client.lock.find_unique(
-            {"workspace_channel_module": {"workspace": workspace, "channel": channel, "module": module}}
+    async def get_locks(self, workspace: str, channel: str):
+        locks = await self._client.lock.find_many(
+            where={"workspace": workspace, "channel": channel}
         )
+        return set([lock.module for lock in locks])
 
     @asynccontextmanager
     async def get_session(self, **kwargs: str):
