@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Any
 
 import aiohttp
-from oono_akira.log import log
 from oono_akira.modules import HandlerType, register
 from oono_akira.slack import SlackContext
 
@@ -14,14 +13,14 @@ dict_data_url = "https://github.com/pwxcoo/chinese-xinhua/raw/master/data/idiom.
 dict_data = None
 
 
-async def get_data():
+async def fetch_dict_data():
     global dict_data
     if dict_data is None:
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(dict_data_url) as resp:
                 text = await resp.text()
         raw = json.loads(text)
-        data: Any = {
+        new_data: Any = {
             "begin": defaultdict(list),
             "end": defaultdict(list),
             "mapping": {},
@@ -33,113 +32,99 @@ async def get_data():
                 continue
             pinyin = list(
                 map(
-                    lambda s: unicodedata.normalize("NFKD", s)
-                    .encode("ascii", "ignore")
-                    .decode(),
+                    lambda s: unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode(),
                     pinyin,
                 )
             )
             item["pinyin_normalized"] = pinyin
             begin = pinyin[0]
             end = pinyin[-1]
-            data["begin"][begin].append(item)
-            data["end"][end].append(item)
-            data["mapping"][item["word"]] = item
-            data["list"].append(item)
-        dict_data = data
+            new_data["begin"][begin].append(item)
+            new_data["end"][end].append(item)
+            new_data["mapping"][item["word"]] = item
+            new_data["list"].append(item)
+        dict_data = new_data
     return dict_data
 
 
 @register("message")
-def handler(context: SlackContext) -> HandlerType:
-    text = context["event"].get("text")
-    if not text:
+def handler(context: SlackContext, locked: bool) -> HandlerType:
+    if context.event.bot_id:
         return
-    db = context["database"]
-    channel = context["event"]["channel"]
-    if text == "成语接龙":
-        asyncio.create_task(get_data())
-        with db.get_session(game="idiom", channel=channel) as session:
-            session.data["status"] = "BEGIN"
-        return channel, process
-    elif len(text) == 4 or text == "不会" or text == "不玩了":
-        with db.get_session(game="idiom", channel=channel) as session:
-            if session.data.get("status") != "ONGOING":
-                return
-            return channel, process
+    if not context.event.text:
+        return
+    channel = context.event.channel
+    if not locked:
+        if context.event.text == "成语接龙":
+            asyncio.create_task(fetch_dict_data())
+            return process, {"queue": channel, "lock": True}
+    else:
+        if context.event.text == "不玩了":
+            return process, {"queue": channel, "lock": False}
+        else:
+            return process, {"queue": channel}
 
 
 async def process(context: SlackContext):
-    await context["ack"]()
-    event = context["event"]
-    answer = event["text"]
-    channel = event["channel"]
-    database = context["database"]
-    data = await get_data()
-    react = None
-    text = None
-    meaning = None
-    with database.get_session(game="idiom", channel=channel) as session:
-        status = session.data.get("status")
-        if status == "BEGIN":
-            session.data["status"] = "ONGOING"
-            word = random.choice(data["list"])
-            session.data["word"] = word
-            text = word["word"]
-            meaning = word["explanation"]
-        elif status == "ONGOING":
-            if answer == "不玩了":
-                text = "祝你身体健康"
-                session.data["status"] = "END"
-            elif answer == "不会":
-                begin = session.data["word"]["pinyin_normalized"][-1]
-                if begin not in data["begin"]:
-                    text = "草，我也不会"
-                    session.data["status"] = "END"
-                else:
-                    word = random.choice(data["begin"][begin])
-                    session.data["word"] = word
-                    text = word["word"]
-                    meaning = word["explanation"]
+    await context.ack()
+    event = context.event
+    text = event.text
+    channel = event.channel
+    dictionary = await fetch_dict_data()
+
+    response_word = None
+    response_text = None
+    response_quote = None
+    response_react = None
+
+    async with context.db.get_session(game="idiom", channel=channel) as session:
+        if text == "成语接龙":
+            response_word = random.choice(dictionary["list"])
+            session["word"] = response_word
+        elif text == "不玩了":
+            response_text = "祝你身体健康"
+        elif text == "不会":
+            begin = session["word"]["pinyin_normalized"][-1]
+            if begin not in dictionary["begin"]:
+                response_text = "草，我也不会"
             else:
-                match = data["mapping"].get(answer)
-                if (
-                    match is None
-                    or match["pinyin_normalized"][0]
-                    != session.data["word"]["pinyin_normalized"][-1]
-                ):
-                    react = "x"
-                else:
-                    begin = match["pinyin_normalized"][-1]
-                    if not data["begin"][begin]:
-                        text = "给我整不会了"
-                        session.data["status"] = "END"
-                    else:
-                        word = random.choice(data["begin"][begin])
-                        session.data["word"] = word
-                        text = word["word"]
-                        meaning = word["explanation"]
+                response_word = random.choice(dictionary["begin"][begin])
+                session["word"] = response_word
         else:
-            log(f"Wrong session status ({status}) for channel {channel}")
-    if text is not None:
+            user_word = dictionary["mapping"].get(text)
+            if user_word is None:
+                response_react = "x"
+            elif user_word["pinyin_normalized"][0] != session["word"]["pinyin_normalized"][-1]:
+                response_react = "x"
+            else:
+                begin = user_word["pinyin_normalized"][-1]
+                if begin not in dictionary["begin"]:
+                    response_text = "给我整不会了"
+                else:
+                    response_word = random.choice(dictionary["begin"][begin])
+                    session["word"] = response_word
+
+    if response_word is not None:
+        response_text = response_word["word"]
+        response_quote = response_word["explanation"]
+
+    if response_text is not None:
         body: Any = {
             "channel": channel,
-            "text": text,
+            "text": response_text,
             "blocks": [
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": text,
+                        "text": response_text,
                     },
                 },
             ],
         }
-        if meaning is not None:
-            body["blocks"].append(
-                {"type": "context", "elements": [{"type": "mrkdwn", "text": "> " + meaning}]}
-            )
-        await context["api"].chat.postMessage(body)
-    if react is not None:
-        body = {"channel": channel, "name": react, "timestamp": event["ts"]}
-        await context["api"].reactions.add(body)
+        if response_quote is not None:
+            body["blocks"].append({"type": "context", "elements": [{"type": "mrkdwn", "text": "> " + response_quote}]})
+        await context.api.chat.postMessage(body)
+    if response_react is not None:
+        body = {"channel": channel, "name": response_react, "timestamp": event.ts}
+        await context.api.reactions.add(body)
