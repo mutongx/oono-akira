@@ -70,6 +70,20 @@ def get_message() -> str:
     )
 
 
+@register("message")
+def message_handler(context: SlackContext) -> HandlerType:
+    if context.event.bot_id:
+        return
+    if not context.event.text:
+        return
+    if context.event.text == f"<@{context.workspace.botId}>":
+
+        async def ignore(context: SlackContext):
+            await context.ack()
+
+        return ignore, {}
+
+
 @register("app_mention")
 def app_mention_handler(context: SlackContext) -> HandlerType:
     if context.event.bot_id:
