@@ -1,3 +1,4 @@
+import re
 from typing import List
 
 from oono_akira.modules import HandlerType, register
@@ -18,7 +19,7 @@ def handler(context: SlackContext) -> HandlerType:
     if not context.event.text:
         return
     stack: List[str] = []
-    for char in context.event.text:
+    for char in re.sub(r"<@[0-9A-Za-z]+>", "", context.event.text):
         if char in PAREN_MAPPING:
             stack.append(PAREN_MAPPING[char])
         elif stack and stack[-1] == char:
