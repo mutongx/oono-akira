@@ -66,9 +66,7 @@ class OonoDatabase:
         )
 
     async def get_locks(self, workspace: str, channel: str):
-        locks = await self._client.lock.find_many(
-            where={"workspace": workspace, "channel": channel}
-        )
+        locks = await self._client.lock.find_many(where={"workspace": workspace, "channel": channel})
         return set([lock.module for lock in locks])
 
     @asynccontextmanager
