@@ -16,7 +16,6 @@ def datetime_tz(*args: Any, **kwargs: Any):
 
 @staticmethod
 def get_message() -> str:
-
     now = datetime.now(tz=TIMEZONE)
 
     weekday = now.weekday()
@@ -51,13 +50,8 @@ def get_message() -> str:
     _, days_month = monthrange(now.year, now.month)
     month_perc = (now.day * 60 * 60 + now.hour * 60 + now.minute) / 60 / 60 / days_month
     days_year = (datetime_tz(now.year + 1, 1, 1) - datetime_tz(now.year, 1, 1)).days
-    year_perc = (
-        ((now - datetime_tz(now.year, 1, 1)).days * 24 + now.hour) / days_year / 24
-    )
-    days_centry = (
-        datetime_tz(now.year // 100 * 100 + 100, 1, 1)
-        - datetime_tz(now.year // 100 * 100, 1, 1)
-    ).days
+    year_perc = ((now - datetime_tz(now.year, 1, 1)).days * 24 + now.hour) / days_year / 24
+    days_centry = (datetime_tz(now.year // 100 * 100 + 100, 1, 1) - datetime_tz(now.year // 100 * 100, 1, 1)).days
     centry_perc = ((now - datetime_tz(now.year // 100 * 100, 1, 1)).days) / days_centry
     return "\n".join(
         [
@@ -76,33 +70,23 @@ def get_message() -> str:
     )
 
 
-def should_handle(context: SlackContext) -> bool:
-    bot_user_id = context["workspace"]["bot_id"]
-    text = context["event"].get("text")
-    return bool(text) and text.strip() == f"<@{bot_user_id}>"
-
-
 @register("app_mention")
 def app_mention_handler(context: SlackContext) -> HandlerType:
-    async def process(context: SlackContext):
-        await context["ack"]()
-        event = context["event"]
-        body = {
-            "channel": event["channel"],
-            "text": get_message(),
-        }
-        if "thread_ts" in event:
-            body["thread_ts"] = event["thread_ts"]
-        await context["api"].chat.postMessage(body)
-
-    if should_handle(context):
-        return "", process
+    if context.event.bot_id:
+        return
+    if not context.event.text:
+        return
+    if context.event.text == f"<@{context.workspace.botId}>":
+        return process, {}
 
 
-@register("message")
-def message_handler(context: SlackContext) -> HandlerType:
-    async def process(context: SlackContext):
-        await context["ack"]()
-
-    if should_handle(context):
-        return "", process
+async def process(context: SlackContext):
+    await context.ack()
+    event = context.event
+    body = {
+        "channel": event.channel,
+        "text": get_message(),
+    }
+    if event.thread_ts:
+        body["thread_ts"] = event.thread_ts
+    await context.api.chat.postMessage(body)
