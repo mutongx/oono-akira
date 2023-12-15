@@ -1,15 +1,74 @@
-from typing import Any, Awaitable, Dict, Optional, Protocol, Tuple, TypedDict
+from dataclasses import dataclass, fields
+from typing import Any, Awaitable, Dict, Optional, Protocol, Tuple, Type, TypeVar
 
 from aiohttp import ClientSession
+
+from prisma.models import Workspace
 
 from oono_akira.db import OonoDatabase
 from oono_akira.log import log
 
+
+DataclassType = TypeVar("DataclassType")
+
 AnyDict = Dict[Any, Any]
 
 
-class SlackAPI:
+@dataclass
+class SlackEvent:
+    type: str
+    user: str
+    channel: str
+    ts: str
+    text: Optional[str] = None
+    bot_id: Optional[str] = None
+    thread_ts: Optional[str] = None
+    blocks: Optional[Any] = None
 
+
+@dataclass
+class SlackEventPayload:
+    team_id: str
+    event_id: str
+    event: SlackEvent
+    type: str
+
+
+@dataclass
+class SlackWebsocketConnectionInfoPayload:
+    app_id: str
+
+
+@dataclass
+class SlackWebSocketEventPayload:
+    type: str
+    payload: Optional[SlackEventPayload] = None
+    envelope_id: Optional[str] = None
+    accepts_response_payload: Optional[bool] = None
+    connection_info: Optional[SlackWebsocketConnectionInfoPayload] = None
+    reason: Optional[str] = None
+
+
+class SlackPayloadParser:
+    @staticmethod
+    def _parse(t: Type[DataclassType], d: AnyDict) -> DataclassType:
+        kwargs = {}
+        for field in fields(t):  # type: ignore
+            if field.name not in d:
+                continue
+            real_type = field.type.__args__[0] if getattr(field.type, "_name", None) == "Optional" else field.type
+            if hasattr(real_type, "__dataclass_fields__"):
+                kwargs[field.name] = SlackPayloadParser._parse(real_type, d[field.name])
+            else:
+                kwargs[field.name] = d[field.name]
+        return t(**kwargs)
+
+    @staticmethod
+    def parse(data: AnyDict) -> SlackWebSocketEventPayload:
+        return SlackPayloadParser._parse(SlackWebSocketEventPayload, data)
+
+
+class SlackAPI:
     _REQ = {
         "oauth.v2.access": {
             "method": "post",
@@ -54,37 +113,11 @@ class SlackAPI:
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
         # Send request
-        resp = await self._session.request(
-            method, f"https://slack.com/api/{api}", headers=headers, **body
-        )
+        resp = await self._session.request(method, f"https://slack.com/api/{api}", headers=headers, **body)
         result = await resp.json()
         if not result.get("ok"):
             log(f"Error: {result}")
         return result
-
-
-class SlackEvent(TypedDict):
-    type: str
-    user: str
-    text: str
-    channel: str
-    ts: str
-    thread_ts: str
-    blocks: Any
-
-
-class SlackEventPayload(TypedDict):
-    team_id: str
-    event_id: str
-    event: SlackEvent
-    type: str
-
-
-class SlackWebSocketEventPayload(TypedDict):
-    payload: SlackEventPayload
-    envelope_id: str
-    type: str
-    accepts_response_payload: bool
 
 
 class SlackAckFunction(Protocol):
@@ -92,16 +125,13 @@ class SlackAckFunction(Protocol):
         ...
 
 
-class SlackWorkspaceContext(TypedDict):
-    name: str
-    bot_id: str
-    admin_id: str
-
-
-class SlackContext(TypedDict):
-    api: SlackAPI
-    database: OonoDatabase
-    ack: SlackAckFunction
-    workspace: SlackWorkspaceContext
+@dataclass
+class SlackContext:
     id: str
+    api: SlackAPI
+    db: OonoDatabase
+    ack: SlackAckFunction
+    locked: bool
+    workspace: Workspace
     event: SlackEvent
+    data: Any
