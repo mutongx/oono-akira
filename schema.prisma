@@ -14,6 +14,7 @@ model Workspace {
     name String
     botId String
     adminId String
+    hookUrl String
     token String
     createdAt DateTime
     updatedAt DateTime
@@ -21,7 +22,7 @@ model Workspace {
 
 model Payload {
     id String @id @default(uuid())
-    type String
+    source String
     content String
     createdAt DateTime
 }
