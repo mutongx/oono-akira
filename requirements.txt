@@ -1,3 +1,4 @@
 aiohttp
 pytz
 websockets
+prisma

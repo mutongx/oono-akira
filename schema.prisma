@@ -1,0 +1,41 @@
+generator client {
+    provider = "prisma-client-py"
+    interface = "asyncio"
+    recursive_type_depth = -1
+}
+
+datasource db {
+    provider = "sqlite"
+    url = "file:oono.db"
+}
+
+model Workspace {
+    id String @id
+    name String
+    botId String
+    adminId String
+    token String
+    createdAt DateTime
+    updatedAt DateTime
+}
+
+model Payload {
+    id String @id @default(uuid())
+    type String
+    content String
+    createdAt DateTime
+}
+
+model Session {
+    key String @id
+    content String
+    createdAt DateTime
+    updatedAt DateTime
+}
+
+model Lock {
+    workspace String
+    channel String
+    module String
+    @@id([workspace, channel, module])
+}

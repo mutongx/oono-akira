@@ -19,8 +19,7 @@
         }
     },
     "database": {
-        "sqlite": {
-            "path": ".oono/oono.db"
-        }
+        "provider": "sqlite",
+        "path": ".oono/oono.db"
     }
 }

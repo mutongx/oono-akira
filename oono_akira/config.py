@@ -1,4 +1,4 @@
-from typing import List, Optional, TypedDict
+from typing import List, TypedDict
 
 
 class ServerSslConfiguration(TypedDict):
@@ -11,12 +11,9 @@ class ServerConfiguration(TypedDict):
     ssl: ServerSslConfiguration
 
 
-class SqliteDatabaseConfiguration(TypedDict):
-    path: str
-
-
 class DatabaseConfiguration(TypedDict):
-    sqlite: Optional[SqliteDatabaseConfiguration]
+    provider: str
+    url: str
 
 
 class SlackConfiguration(TypedDict):
