@@ -140,6 +140,3 @@ dmypy.json
 
 # PDM
 .pdm-python
-
-# Prisma client
-.prisma
