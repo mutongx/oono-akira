@@ -1,6 +1,6 @@
 from oono_akira.modules import register
 
 
-@register("message")
+@register("/oono")
 def null(*_):
     return
