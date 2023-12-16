@@ -137,3 +137,6 @@ dmypy.json
 # IDE file
 .vscode/
 .idea/
+
+# Prisma client
+.prisma
