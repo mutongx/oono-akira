@@ -43,8 +43,8 @@ class OonoAkira:
         self._web_app.add_routes([web.get(f"{server.get('prefix', '')}/install", self._install_handler)])
         self._web_port = server.get("port", 25472)
 
-        self._payload_queue: Deque[str] = deque()
-        self._payload_mapping: Dict[str, Optional[str]] = dict()
+        self._payload_tracker: Dict[str, str] = dict()
+        self._payload_tracker_queue: Deque[str] = deque()
 
         self._background_tasks: Set[asyncio.Task[Any]] = set()
 
@@ -139,22 +139,21 @@ class OonoAkira:
                             if payload.type == "events_api":
                                 assert payload.payload is not None
                                 assert payload.envelope_id is not None
-                                event_id = payload.payload.event_id
+
                                 envelope_id = payload.envelope_id
-                                track = self._track_payload(event_id)
-                                if track is not True:
-                                    if track is not None:
-                                        log(f"Duplicate event {event_id}. Previously processed by {track}.")
-                                    else:
-                                        log(f"Duplicate event {event_id}.")
-                                else:
+                                event_id = payload.payload.event_id
 
-                                    async def ack_func(body: Any = None):
-                                        return await self._ack_queue.put((envelope_id, event_id, body))
+                                async def ack_func(body: Any = None):
+                                    return await self._ack_queue.put((envelope_id, event_id, body))
 
+                                track = self._track_payload(event_id, "unknown")
+                                if track is None:
                                     handler_name = await self._process_event(envelope_id, payload.payload, ack_func)
-                                    log(f"Handled event   {event_id}, handler={handler_name}")
-                                    self._track_payload(event_id, handler_name, True)
+                                    self._track_payload(event_id, handler_name, update=True)
+                                    log(f"Handled event {event_id}, handler={handler_name}")
+                                else:
+                                    log(f"Duplicate event {event_id}. Previously processed by {track}.")
+
                             elif payload.type == "hello":
                                 assert payload.connection_info is not None
                                 log(f"WebSocket connection established, appid = {payload.connection_info.app_id}")
@@ -178,21 +177,22 @@ class OonoAkira:
             except Exception:
                 traceback.print_exc()
 
-    def _track_payload(self, track_id: str, processor: Optional[str] = None, update: bool = False) -> bool | str | None:
+    def _track_payload(self, track_id: str, processor: str, *, update: bool = False) -> Optional[str]:
+        # When update is True, we should never add new values to tracker
         if update:
-            if track_id not in self._payload_mapping:
-                return False
-            self._payload_mapping[track_id] = processor
-            return True
-        # update == False
-        if track_id in self._payload_mapping:
-            return self._payload_mapping[track_id]
-        self._payload_queue.append(track_id)
-        self._payload_mapping[track_id] = processor
-        if len(self._payload_queue) > self.PAYLOAD_TRACKER_SIZE:
-            item = self._payload_queue.popleft()
-            del self._payload_mapping[item]
-        return True
+            if track_id in self._payload_tracker:
+                self._payload_tracker[track_id] = processor
+            return
+        # The payload is already tracked, so return the value        
+        if track_id in self._payload_tracker:
+            return self._payload_tracker[track_id]
+        # Otherwise, we add a record
+        self._payload_tracker_queue.append(track_id)
+        self._payload_tracker[track_id] = processor
+        if len(self._payload_tracker_queue) > self.PAYLOAD_TRACKER_SIZE:
+            item = self._payload_tracker_queue.popleft()
+            del self._payload_tracker[item]
+        return
 
     async def _process_event(self, envelope_id: str, payload: SlackEventPayload, ack: SlackAckFunction) -> str:
         workspace = await self._db.get_workspace(payload.team_id)
