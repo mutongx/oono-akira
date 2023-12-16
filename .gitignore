@@ -138,5 +138,8 @@ dmypy.json
 .vscode/
 .idea/
 
+# PDM
+.pdm-python
+
 # Prisma client
 .prisma

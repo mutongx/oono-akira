@@ -1,5 +1,19 @@
+[project]
+name = "oono-akira"
+version = "1.0.0"
+description = "A fishing around helper for Slack."
+dependencies = [
+    "aiohttp",
+    "pytz",
+    "prisma",
+]
+requires-python = ">=3.11"
+
 [tool.black]
 line-length = 120
 
 [tool.prisma]
 binary_cache_dir = ".prisma"
+
+[tool.pdm]
+package-type = "application"
