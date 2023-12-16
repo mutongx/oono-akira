@@ -219,6 +219,8 @@ class OonoAkira:
 
         # Find handler function
         for module, constructor in self._modules.iterate_modules(event.type):
+            if locks and module not in locks:
+                continue
             handler = constructor(context, module in locks)
             if handler is not None:
                 break
