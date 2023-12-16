@@ -227,7 +227,6 @@ class OonoAkira:
             ack=ack,
             workspace=workspace,
             event=event,
-            data=None,
         )
 
         # Find handler function

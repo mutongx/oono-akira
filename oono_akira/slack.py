@@ -157,4 +157,4 @@ class SlackContext:
     ack: SlackAckFunction
     workspace: Workspace
     event: SlackEvent
-    data: Any
+    data: Any = None
