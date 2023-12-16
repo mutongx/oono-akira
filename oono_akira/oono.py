@@ -14,7 +14,14 @@ from oono_akira.config import Configuration
 from oono_akira.db import OonoDatabase
 from oono_akira.log import log
 from oono_akira.modules import ModulesManager
-from oono_akira.slack import SlackAPI, SlackContext, SlackEventPayload, SlackPayloadParser, SlackAckFunction
+from oono_akira.slack import (
+    SlackAPI,
+    SlackContext,
+    SlackEventsApiPayload,
+    SlackSlashCommandsPayload,
+    SlackPayloadParser,
+    SlackAckFunction,
+)
 
 
 class OonoAkira:
@@ -137,8 +144,8 @@ class OonoAkira:
                             # Process payload
                             payload = SlackPayloadParser.parse(json.loads(recv_result.data))
                             if payload.type == "events_api":
-                                assert payload.payload is not None
                                 assert payload.envelope_id is not None
+                                assert isinstance(payload.payload, SlackEventsApiPayload)
 
                                 envelope_id = payload.envelope_id
                                 event_id = payload.payload.event_id
@@ -154,14 +161,20 @@ class OonoAkira:
                                 else:
                                     log(f"Duplicate event {event_id}. Previously processed by {track}.")
 
+                            elif payload.type == "slash_commands":
+                                assert payload.envelope_id is not None
+                                assert isinstance(payload.payload, SlackSlashCommandsPayload)
+
                             elif payload.type == "hello":
                                 assert payload.connection_info is not None
                                 log(f"WebSocket connection established, appid = {payload.connection_info.app_id}")
+
                             elif payload.type == "disconnect":
                                 assert payload.reason is not None
                                 log(f"Received disconnect request, reason: {payload.reason}")
                                 await conn.close()
                                 break
+
                         if ack in done:
                             # Start a new ack task
                             ack_result = await ack
@@ -183,7 +196,7 @@ class OonoAkira:
             if track_id in self._payload_tracker:
                 self._payload_tracker[track_id] = processor
             return
-        # The payload is already tracked, so return the value        
+        # The payload is already tracked, so return the value
         if track_id in self._payload_tracker:
             return self._payload_tracker[track_id]
         # Otherwise, we add a record
@@ -194,7 +207,7 @@ class OonoAkira:
             del self._payload_tracker[item]
         return
 
-    async def _process_event(self, envelope_id: str, payload: SlackEventPayload, ack: SlackAckFunction) -> str:
+    async def _process_event(self, envelope_id: str, payload: SlackEventsApiPayload, ack: SlackAckFunction) -> str:
         workspace = await self._db.get_workspace(payload.team_id)
         if workspace is None:
             await ack()
