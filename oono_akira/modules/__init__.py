@@ -91,6 +91,7 @@ class ModulesManager:
             self._future[name] = asyncio.create_task(self._run(name))
 
     async def _run(self, name: str):
+        # TODO: Add garbage collection
         queue = self._queue[name]
         while True:
             item = await queue.get()
