@@ -1,4 +1,4 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Any, Awaitable, Dict, Optional, Protocol, Tuple, Type, TypeVar
 
 from aiohttp import ClientSession
@@ -27,11 +27,20 @@ class SlackEvent:
 
 
 @dataclass
-class SlackEventPayload:
+class SlackEventsApiPayload:
     team_id: str
     event_id: str
     event: SlackEvent
-    type: str
+
+
+@dataclass
+class SlackSlashCommandsPayload:
+    team_id: str
+    channel_id: str
+    user_id: str
+    command: str
+    text: str
+    response_url: str
 
 
 @dataclass
@@ -42,7 +51,13 @@ class SlackWebsocketConnectionInfoPayload:
 @dataclass
 class SlackWebSocketEventPayload:
     type: str
-    payload: Optional[SlackEventPayload] = None
+    payload: Optional[SlackEventsApiPayload | SlackSlashCommandsPayload] = field(
+        default=None,
+        metadata={
+            ("type", "events_api"): SlackEventsApiPayload,
+            ("type", "slash_commands"): SlackSlashCommandsPayload,
+        },
+    )
     envelope_id: Optional[str] = None
     accepts_response_payload: Optional[bool] = None
     connection_info: Optional[SlackWebsocketConnectionInfoPayload] = None
@@ -56,7 +71,16 @@ class SlackPayloadParser:
         for field in fields(t):  # type: ignore
             if field.name not in d:
                 continue
-            real_type = field.type.__args__[0] if getattr(field.type, "_name", None) == "Optional" else field.type
+            real_type = field.type
+            if field.metadata:
+                for (key, value), candidate_type in field.metadata.items():
+                    if key in kwargs and kwargs[key] == value:
+                        real_type = candidate_type
+                        break
+                else:
+                    continue
+            elif getattr(field.type, "_name", None) == "Optional":
+                real_type = field.type.__args__[0]
             if hasattr(real_type, "__dataclass_fields__"):
                 kwargs[field.name] = SlackPayloadParser._parse(real_type, d[field.name])
             else:
