@@ -23,7 +23,7 @@ async def process(context: SlackContext):
                     f"Workspace ID: {command.team_id}",
                     f"Channel ID: {command.channel_id}",
                     f"User ID: {command.user_id}",
-                    f"User is admin: {command.user_id == context.workspace.adminId}"
+                    f"User is admin: {command.user_id == context.workspace.adminId}",
                 ]
             ),
         }
