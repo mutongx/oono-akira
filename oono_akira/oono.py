@@ -196,7 +196,6 @@ class OonoAkira:
         return
 
     async def _process_event(self, envelope_id: str, payload: SlackEventsApiPayload) -> str:
-
         async def ack(body: Any = None):
             return await self._ack_queue.put((envelope_id, body))
 
@@ -204,13 +203,9 @@ class OonoAkira:
         if workspace is None:
             await ack()
             return "unknown_workspace"
-
-        event = payload.event
-        if event.user == workspace.botId:
+        if payload.event.user == workspace.botId:
             await ack()
             return "ignore_self"
-
-        locks = await self._db.get_locks(workspace.id, event.channel)
 
         context = SlackContext(
             id=envelope_id,
@@ -218,11 +213,11 @@ class OonoAkira:
             db=self._db,
             ack=ack,
             workspace=workspace,
-            event=event,
+            event=payload.event,
         )
 
-        # Find handler function
-        for module, constructor in self._modules.iterate_modules(event.type):
+        locks = await self._db.get_locks(workspace.id, payload.event.channel)
+        for module, constructor in self._modules.iterate_modules(payload.event.type):
             if locks and module not in locks:
                 continue
             handler = constructor(context, module in locks)
@@ -232,17 +227,15 @@ class OonoAkira:
             await ack()
             return "no_handler"
 
-        # Enqueue the function
-        handler_func, option = handler
-        queue_name = f"{handler_func.__module__}/{option.get('queue', '__default__')}"
-
         async def callback():
             if "lock" in option:
                 if option["lock"]:
-                    await self._db.acquire_lock(workspace.id, event.channel, module)
+                    await self._db.acquire_lock(workspace.id, payload.event.channel, module)
                 else:
-                    await self._db.release_lock(workspace.id, event.channel, module)
+                    await self._db.release_lock(workspace.id, payload.event.channel, module)
 
+        handler_func, option = handler
+        queue_name = f"{handler_func.__module__}/{option.get('queue', '__default__')}"
         await self._modules.queue(queue_name, context, handler_func, callback)
 
         return handler_func.__module__
