@@ -165,3 +165,4 @@ class SlackContext:
     def must_command(self):
         if self.command is None:
             raise RuntimeError("command is None")
+        return self.command
