@@ -80,7 +80,7 @@ class ModulesManager:
         name: str,
         context: SlackContext,
         handler_func: HandlerFunctionType,
-        callback_func: CallbackFunctionType,
+        callback_func: Optional[CallbackFunctionType] = None,
     ):
         self._ensure_queue(name)
         await self._queue[name].put((context, handler_func, callback_func))
