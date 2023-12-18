@@ -167,7 +167,7 @@ class OonoAkira:
 
                             elif payload.type == "hello":
                                 assert payload.connection_info is not None
-                                log(f"WebSocket connection established, appid = {payload.connection_info.app_id}")
+                                log(f"WebSocket connection established, appid = {payload.connection_info['app_id']}")
 
                             elif payload.type == "disconnect":
                                 assert payload.reason is not None

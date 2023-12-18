@@ -44,13 +44,9 @@ class SlackSlashCommandsPayload:
 
 
 @dataclass
-class SlackWebsocketConnectionInfoPayload:
-    app_id: str
-
-
-@dataclass
 class SlackWebSocketEventPayload:
     type: str
+    envelope_id: Optional[str] = None
     payload: Optional[SlackEventsApiPayload | SlackSlashCommandsPayload] = field(
         default=None,
         metadata={
@@ -58,9 +54,9 @@ class SlackWebSocketEventPayload:
             ("type", "slash_commands"): SlackSlashCommandsPayload,
         },
     )
-    envelope_id: Optional[str] = None
     accepts_response_payload: Optional[bool] = None
-    connection_info: Optional[SlackWebsocketConnectionInfoPayload] = None
+    connection_info: Optional[AnyDict] = None
+    debug_info: Optional[AnyDict] = None
     reason: Optional[str] = None
 
 
