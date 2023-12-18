@@ -19,10 +19,11 @@ async def process(context: SlackContext):
                 [
                     "Hello from Oono Akira!",
                     "",
-                    f"Self: {context.workspace.botId}",
-                    f"Workspace: {command.team_id}",
-                    f"Channel: {command.channel_id}",
-                    f"User: {command.user_id}",
+                    f"Bot ID: {context.workspace.botId}",
+                    f"Workspace ID: {command.team_id}",
+                    f"Channel ID: {command.channel_id}",
+                    f"User ID: {command.user_id}",
+                    f"User is admin: {command.user_id == context.workspace.adminId}"
                 ]
             ),
         }
