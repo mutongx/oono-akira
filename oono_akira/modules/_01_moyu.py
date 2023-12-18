@@ -72,11 +72,12 @@ def get_message() -> str:
 
 @register("message")
 def message_handler(context: SlackContext, locked: bool) -> HandlerType:
-    if context.event.bot_id:
+    event = context.must_event()
+    if event.bot_id:
         return
-    if not context.event.text:
+    if not event.text:
         return
-    if context.event.text == f"<@{context.workspace.botId}>":
+    if event.text == f"<@{context.workspace.botId}>":
 
         async def ignore(context: SlackContext):
             await context.ack()
@@ -86,17 +87,18 @@ def message_handler(context: SlackContext, locked: bool) -> HandlerType:
 
 @register("app_mention")
 def app_mention_handler(context: SlackContext, locked: bool) -> HandlerType:
-    if context.event.bot_id:
+    event = context.must_event()
+    if event.bot_id:
         return
-    if not context.event.text:
+    if not event.text:
         return
-    if context.event.text == f"<@{context.workspace.botId}>":
+    if event.text == f"<@{context.workspace.botId}>":
         return process, {}
 
 
 async def process(context: SlackContext):
     await context.ack()
-    event = context.event
+    event = context.must_event()
     body = {
         "channel": event.channel,
         "text": get_message(),

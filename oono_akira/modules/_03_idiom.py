@@ -49,17 +49,18 @@ async def fetch_dict_data():
 
 @register("message")
 def handler(context: SlackContext, locked: bool) -> HandlerType:
-    if context.event.bot_id:
+    event = context.must_event()
+    if event.bot_id:
         return
-    if not context.event.text:
+    if not event.text:
         return
-    channel = context.event.channel
+    channel = event.channel
     if not locked:
-        if context.event.text == "成语接龙":
+        if event.text == "成语接龙":
             asyncio.create_task(fetch_dict_data())
             return process, {"queue": channel, "lock": True}
     else:
-        if context.event.text == "不玩了":
+        if event.text == "不玩了":
             return process, {"queue": channel, "lock": False}
         else:
             return process, {"queue": channel}
@@ -67,7 +68,7 @@ def handler(context: SlackContext, locked: bool) -> HandlerType:
 
 async def process(context: SlackContext):
     await context.ack()
-    event = context.event
+    event = context.must_event()
     text = event.text
     channel = event.channel
     dictionary = await fetch_dict_data()

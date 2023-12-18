@@ -14,12 +14,13 @@ PAREN_MAPPING = {l: r for l, r in zip(_L, _R)}
 
 @register("message")
 def handler(context: SlackContext, locked: bool) -> HandlerType:
-    if context.event.bot_id:
+    event = context.must_event()
+    if event.bot_id:
         return
-    if not context.event.text:
+    if not event.text:
         return
     stack: List[str] = []
-    for char in re.sub(r"<@[0-9A-Za-z]+>", "", context.event.text):
+    for char in re.sub(r"<@[0-9A-Za-z]+>", "", event.text):
         if char in PAREN_MAPPING:
             stack.append(PAREN_MAPPING[char])
         elif stack and stack[-1] == char:
@@ -32,7 +33,7 @@ def handler(context: SlackContext, locked: bool) -> HandlerType:
 
 async def process(context: SlackContext):
     await context.ack()
-    event = context.event
+    event = context.must_event()
     body = {
         "channel": event.channel,
         "text": "".join(reversed(context.data)) + " ○(￣^￣○)",

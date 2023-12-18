@@ -4,9 +4,10 @@ from oono_akira.slack import SlackContext
 
 @register("message")
 def handler(context: SlackContext, locked: bool) -> HandlerType:
-    if context.event.bot_id:
+    event = context.must_event()
+    if event.bot_id:
         return
-    blocks = context.event.blocks
+    blocks = event.blocks
     if not blocks or len(blocks) != 1:
         return
     block = blocks[0]
@@ -24,7 +25,7 @@ def handler(context: SlackContext, locked: bool) -> HandlerType:
 
 async def process(context: SlackContext):
     await context.ack()
-    event = context.event
+    event = context.must_event()
     user_id = event.user
     if user_id == "USLACKBOT":
         return
