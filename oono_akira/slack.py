@@ -156,3 +156,12 @@ class SlackContext:
     event: Optional[SlackEventPayload] = None
     command: Optional[SlackSlashCommandsPayload] = None
     data: Any = None
+
+    def must_event(self):
+        if self.event is None:
+            raise RuntimeError("event is None")
+        return self.event
+
+    def must_command(self):
+        if self.command is None:
+            raise RuntimeError("command is None")
