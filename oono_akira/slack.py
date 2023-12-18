@@ -15,7 +15,7 @@ AnyDict = Dict[Any, Any]
 
 
 @dataclass
-class SlackEvent:
+class SlackEventPayload:
     type: str
     user: str
     channel: str
@@ -28,9 +28,10 @@ class SlackEvent:
 
 @dataclass
 class SlackEventsApiPayload:
+    type: str
     team_id: str
     event_id: str
-    event: SlackEvent
+    event: SlackEventPayload
 
 
 @dataclass
@@ -152,5 +153,6 @@ class SlackContext:
     db: OonoDatabase
     ack: SlackAckFunction
     workspace: Workspace
-    event: SlackEvent
+    event: Optional[SlackEventPayload] = None
+    command: Optional[SlackSlashCommandsPayload] = None
     data: Any = None
