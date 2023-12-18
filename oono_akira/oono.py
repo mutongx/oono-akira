@@ -165,6 +165,9 @@ class OonoAkira:
                             elif payload.type == "slash_commands":
                                 assert payload.envelope_id is not None
                                 assert isinstance(payload.payload, SlackSlashCommandsPayload)
+                                envelope_id = payload.envelope_id
+                                handler_name = await self._process_command(envelope_id, payload.payload)
+                                log(f"Handled command {payload.payload.command}, handler={handler_name}")
                         if ack in done:
                             # Start a new ack task
                             ack_result = await ack
@@ -237,5 +240,37 @@ class OonoAkira:
         handler_func, option = handler
         queue_name = f"{handler_func.__module__}/{option.get('queue', '__default__')}"
         await self._modules.queue(queue_name, context, handler_func, callback)
+
+        return handler_func.__module__
+
+    async def _process_command(self, envelope_id: str, payload: SlackSlashCommandsPayload) -> str:
+        async def ack(body: Any = None):
+            return await self._ack_queue.put((envelope_id, body))
+
+        workspace = await self._db.get_workspace(payload.team_id)
+        if workspace is None:
+            await ack()
+            return "unknown_workspace"
+
+        context = SlackContext(
+            id=envelope_id,
+            api=SlackAPI(self._client, workspace.token),
+            db=self._db,
+            ack=ack,
+            workspace=workspace,
+            command=payload,
+        )
+
+        for _, constructor in self._modules.iterate_modules(payload.command):
+            handler = constructor(context, False)
+            if handler is not None:
+                break
+        else:
+            await ack()
+            return "no_handler"
+
+        handler_func, option = handler
+        queue_name = f"{handler_func.__module__}/{option.get('queue', '__default__')}"
+        await self._modules.queue(queue_name, context, handler_func)
 
         return handler_func.__module__
