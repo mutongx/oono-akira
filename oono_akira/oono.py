@@ -20,7 +20,6 @@ from oono_akira.slack import (
     SlackEventsApiPayload,
     SlackSlashCommandsPayload,
     SlackPayloadParser,
-    SlackAckFunction,
 )
 
 
@@ -143,48 +142,37 @@ class OonoAkira:
                             pending.add(recv)
                             # Process payload
                             payload = SlackPayloadParser.parse(json.loads(recv_result.data))
-                            if payload.type == "events_api":
-                                assert payload.envelope_id is not None
-                                assert isinstance(payload.payload, SlackEventsApiPayload)
-
-                                envelope_id = payload.envelope_id
-                                event_id = payload.payload.event_id
-
-                                async def ack_func(body: Any = None):
-                                    return await self._ack_queue.put((envelope_id, body))
-
-                                track = self._track_payload(event_id, "unknown")
-                                if track is None:
-                                    handler_name = await self._process_event(envelope_id, payload.payload, ack_func)
-                                    self._track_payload(event_id, handler_name, update=True)
-                                    log(f"Handled event {event_id}, handler={handler_name}")
-                                else:
-                                    log(f"Duplicate event {event_id}. Previously processed by {track}.")
-
-                            elif payload.type == "slash_commands":
-                                assert payload.envelope_id is not None
-                                assert isinstance(payload.payload, SlackSlashCommandsPayload)
-
-                            elif payload.type == "hello":
+                            if payload.type == "hello":
                                 assert payload.connection_info is not None
                                 log(f"WebSocket connection established, appid = {payload.connection_info['app_id']}")
-
                             elif payload.type == "disconnect":
                                 assert payload.reason is not None
                                 log(f"Received disconnect request, reason: {payload.reason}")
                                 await conn.close()
                                 break
-
+                            elif payload.type == "events_api":
+                                assert payload.envelope_id is not None
+                                assert isinstance(payload.payload, SlackEventsApiPayload)
+                                envelope_id = payload.envelope_id
+                                event_id = payload.payload.event_id
+                                track = self._track_payload(event_id, "unknown")
+                                if track is None:
+                                    handler_name = await self._process_event(envelope_id, payload.payload)
+                                    self._track_payload(event_id, handler_name, update=True)
+                                    log(f"Handled event {event_id}, handler={handler_name}")
+                                else:
+                                    log(f"Duplicate event {event_id}. Previously processed by {track}.")
+                            elif payload.type == "slash_commands":
+                                assert payload.envelope_id is not None
+                                assert isinstance(payload.payload, SlackSlashCommandsPayload)
                         if ack in done:
                             # Start a new ack task
                             ack_result = await ack
                             ack = asyncio.create_task(self._ack_queue.get())
                             pending.add(ack)
                             # Process ack
-                            envelope_id, ack_payload = ack_result
-                            self._run_in_background(
-                                conn.send_json({"envelope_id": envelope_id, "payload": ack_payload})
-                            )
+                            envelope_id, payload = ack_result
+                            self._run_in_background(conn.send_json({"envelope_id": envelope_id, "payload": payload}))
                 log(f"Disconnected.")
 
             except Exception:
@@ -207,7 +195,11 @@ class OonoAkira:
             del self._payload_tracker[item]
         return
 
-    async def _process_event(self, envelope_id: str, payload: SlackEventsApiPayload, ack: SlackAckFunction) -> str:
+    async def _process_event(self, envelope_id: str, payload: SlackEventsApiPayload) -> str:
+
+        async def ack(body: Any = None):
+            return await self._ack_queue.put((envelope_id, body))
+
         workspace = await self._db.get_workspace(payload.team_id)
         if workspace is None:
             await ack()
