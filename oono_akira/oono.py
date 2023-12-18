@@ -56,7 +56,7 @@ class OonoAkira:
         self._background_tasks: Set[asyncio.Task[Any]] = set()
 
     async def __aenter__(self):
-        self._ack_queue: asyncio.Queue[Tuple[str, str, Any]] = asyncio.Queue()
+        self._ack_queue: asyncio.Queue[Tuple[str, Any]] = asyncio.Queue()
 
         async with AsyncExitStack() as stack:
             self._db = await stack.enter_async_context(OonoDatabase(self._db_config))
@@ -151,7 +151,7 @@ class OonoAkira:
                                 event_id = payload.payload.event_id
 
                                 async def ack_func(body: Any = None):
-                                    return await self._ack_queue.put((envelope_id, event_id, body))
+                                    return await self._ack_queue.put((envelope_id, body))
 
                                 track = self._track_payload(event_id, "unknown")
                                 if track is None:
@@ -181,7 +181,7 @@ class OonoAkira:
                             ack = asyncio.create_task(self._ack_queue.get())
                             pending.add(ack)
                             # Process ack
-                            envelope_id, event_id, ack_payload = ack_result
+                            envelope_id, ack_payload = ack_result
                             self._run_in_background(
                                 conn.send_json({"envelope_id": envelope_id, "payload": ack_payload})
                             )
