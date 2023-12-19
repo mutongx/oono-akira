@@ -15,16 +15,59 @@ async def process(context: SlackContext):
         {
             "channel": command.channel_id,
             "user": command.user_id,
-            "text": "\n".join(
-                [
-                    "Hello from Oono Akira!",
-                    "",
-                    f"Bot ID: {context.workspace.botId}",
-                    f"Workspace ID: {command.team_id}",
-                    f"Channel ID: {command.channel_id}",
-                    f"User ID: {command.user_id}",
-                    f"User is admin: {command.user_id == context.workspace.adminId}",
-                ]
-            ),
+            "text": "Hello from Oono Akira!",
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "elements": [
+                        {"type": "rich_text_section", "elements": [{"type": "text", "text": "Hello from Oono Akira!"}]},
+                        {
+                            "type": "rich_text_list",
+                            "style": "bullet",
+                            "elements": [
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {"type": "text", "text": "Bot ID: "},
+                                        {"type": "text", "text": context.workspace.botId},
+                                    ],
+                                },
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {"type": "text", "text": "Workspace ID: "},
+                                        {"type": "text", "text": command.team_id},
+                                    ],
+                                },
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {"type": "text", "text": "Channel ID: "},
+                                        {"type": "text", "text": command.channel_id},
+                                    ],
+                                },
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {"type": "text", "text": "User ID: "},
+                                        {"type": "text", "text": command.user_id},
+                                    ],
+                                },
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {"type": "text", "text": "User is admin: "},
+                                        {"type": "text", "text": str(command.user_id == context.workspace.adminId)},
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "type": "rich_text_preformatted",
+                            "elements": [{"type": "text", "text": f"/oono {command.text}"}],
+                        },
+                    ],
+                }
+            ],
         }
     )
