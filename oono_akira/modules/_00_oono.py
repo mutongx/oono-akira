@@ -20,7 +20,10 @@ async def process(context: SlackContext):
                 {
                     "type": "rich_text",
                     "elements": [
-                        {"type": "rich_text_section", "elements": [{"type": "text", "text": "Hello from Oono Akira!"}]},
+                        {
+                            "type": "rich_text_section",
+                            "elements": [{"type": "text", "text": "Hello from Oono Akira!\n"}],
+                        },
                         {
                             "type": "rich_text_list",
                             "style": "bullet",
