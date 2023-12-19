@@ -9,20 +9,21 @@ from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple, O
 from oono_akira.log import log
 from oono_akira.slack import SlackContext
 
-CallbackFunctionType = Callable[[], Awaitable[None]]
-HandlerFunctionType = Callable[[SlackContext], Awaitable[None]]
-HandlerOptionType = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
-HandlerType = Optional[Tuple[HandlerFunctionType, HandlerOptionType]]
-HandlerConstructorType = Callable[[SlackContext, bool], HandlerType]
+Callback = Callable[[], Awaitable[None]]
+HandlerFunction = Callable[[SlackContext], Awaitable[None]]
+HandlerOption = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
+Handler = Tuple[HandlerFunction, HandlerOption]
+HandlerConstructorOption = TypedDict("HandlerConstructorOption", locked=bool, granted=bool)
+HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Optional[Handler]]
 
 
 class ModulesManager:
-    CAPABILITIES: Dict[str, List[HandlerConstructorType]] = {}
-    CAPABILITIES_MAPPING: Dict[str, Dict[str, HandlerConstructorType]] = {}
+    CAPABILITIES: Dict[str, List[HandlerConstructor]] = {}
+    CAPABILITIES_MAPPING: Dict[str, Dict[str, HandlerConstructor]] = {}
 
     @staticmethod
-    def register(type: str) -> Callable[[HandlerConstructorType], HandlerConstructorType]:
-        def make(type: str, func: HandlerConstructorType):
+    def register(type: str) -> Callable[[HandlerConstructor], HandlerConstructor]:
+        def _register(type: str, func: HandlerConstructor):
             if type not in ModulesManager.CAPABILITIES:
                 ModulesManager.CAPABILITIES[type] = []
             if func.__module__ not in ModulesManager.CAPABILITIES_MAPPING:
@@ -31,7 +32,7 @@ class ModulesManager:
             ModulesManager.CAPABILITIES_MAPPING[func.__module__][type] = func
             return func
 
-        return lambda func: make(type, func)
+        return lambda func: _register(type, func)
 
     def __init__(self) -> None:
         # Module import to module name
@@ -59,7 +60,7 @@ class ModulesManager:
     async def __aenter__(self):
         self._queue: Dict[
             str,
-            asyncio.Queue[Optional[Tuple[SlackContext, HandlerFunctionType, CallbackFunctionType | None]]],
+            asyncio.Queue[Tuple[SlackContext, HandlerFunction, Callback | None] | None],
         ] = {}
         self._future: Dict[str, asyncio.Task[None]] = {}
         return self
@@ -70,7 +71,7 @@ class ModulesManager:
         for future in self._future.values():
             await future
 
-    def iterate_modules(self, capability: str) -> Iterable[Tuple[str, HandlerConstructorType]]:
+    def iterate_modules(self, capability: str) -> Iterable[Tuple[str, HandlerConstructor]]:
         if capability in self.CAPABILITIES:
             for item in self.CAPABILITIES[capability]:
                 yield self._modules_mapping[item.__module__], item
@@ -79,8 +80,8 @@ class ModulesManager:
         self,
         name: str,
         context: SlackContext,
-        handler_func: HandlerFunctionType,
-        callback_func: Optional[CallbackFunctionType] = None,
+        handler_func: HandlerFunction,
+        callback_func: Optional[Callback] = None,
     ):
         self._ensure_queue(name)
         await self._queue[name].put((context, handler_func, callback_func))
