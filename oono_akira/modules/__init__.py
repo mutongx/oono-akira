@@ -12,9 +12,9 @@ from oono_akira.slack import SlackContext
 Callback = Callable[[], Awaitable[None]]
 HandlerFunction = Callable[[SlackContext], Awaitable[None]]
 HandlerOption = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
-Handler = Tuple[HandlerFunction, HandlerOption]
+Handler = Optional[Tuple[HandlerFunction, HandlerOption]]
 HandlerConstructorOption = TypedDict("HandlerConstructorOption", locked=bool, granted=bool)
-HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Optional[Handler]]
+HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Handler]
 
 
 class ModulesManager:
