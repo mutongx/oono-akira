@@ -16,29 +16,29 @@ model Workspace {
     adminId String
     hookUrl String
     token String
-    createdAt DateTime
-    updatedAt DateTime
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Payload {
     id String @id @default(uuid())
     source String
     content String
-    createdAt DateTime
+    createdAt DateTime @default(now())
 }
 
 model Session {
     key String @id
     content String
-    createdAt DateTime
-    updatedAt DateTime
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Lock {
     workspace String
     channel String
     module String
-    createdAt DateTime
+    createdAt DateTime @default(now())
     @@unique(name: "lock", [workspace, channel, module])
 }
 
@@ -47,6 +47,6 @@ model Grant {
     channel String @default("")
     user String @default("")
     module String
-    createdAt DateTime
+    createdAt DateTime @default(now())
     @@unique(name: "grant", [workspace, channel, user, module])
 }
