@@ -1,6 +1,5 @@
 import json
 from contextlib import asynccontextmanager
-from datetime import datetime
 from typing import Any
 from prisma import Prisma
 
@@ -28,7 +27,6 @@ class OonoDatabase:
             data={
                 "source": source,
                 "content": content,
-                "createdAt": datetime.now(),
             }
         )
 
@@ -45,8 +43,6 @@ class OonoDatabase:
                     "adminId": admin_id,
                     "token": token,
                     "hookUrl": hook_url,
-                    "createdAt": datetime.now(),
-                    "updatedAt": datetime.now(),
                 },
                 "update": {
                     "name": name,
@@ -54,7 +50,6 @@ class OonoDatabase:
                     "adminId": admin_id,
                     "token": token,
                     "hookUrl": hook_url,
-                    "updatedAt": datetime.now(),
                 },
             },
         )
@@ -82,7 +77,6 @@ class OonoDatabase:
                     "channel": channel,
                     "user": user,
                     "module": module,
-                    "createdAt": datetime.now(),
                 },
                 "update": {},
             },
@@ -148,7 +142,6 @@ class OonoDatabase:
                     "workspace": workspace,
                     "channel": channel,
                     "module": module,
-                    "createdAt": datetime.now(),
                 },
                 "update": {},
             },
@@ -183,8 +176,6 @@ class OonoDatabase:
                 "create": {
                     "key": key,
                     "content": "{}",
-                    "createdAt": datetime.now(),
-                    "updatedAt": datetime.now(),
                 },
                 "update": {},
             },
@@ -197,6 +188,5 @@ class OonoDatabase:
             },
             data={
                 "content": json.dumps(data),
-                "updatedAt": datetime.now(),
             },
         )
