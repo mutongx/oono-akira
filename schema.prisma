@@ -41,3 +41,12 @@ model Lock {
     createdAt DateTime
     @@unique(name: "lock", [workspace, channel, module])
 }
+
+model Grant {
+    workspace String
+    channel String @default("")
+    user String @default("")
+    module String
+    createdAt DateTime
+    @@unique(name: "grant", [workspace, channel, user, module])
+}
