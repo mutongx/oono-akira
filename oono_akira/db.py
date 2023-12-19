@@ -56,14 +56,15 @@ class OonoDatabase:
 
     async def acquire_lock(self, workspace: str, channel: str, module: str):
         return await self._client.lock.upsert(
-            {"workspace_channel_module": {"workspace": workspace, "channel": channel, "module": module}},
-            {"create": {"workspace": workspace, "channel": channel, "module": module}, "update": {}},
+            {"lock": {"workspace": workspace, "channel": channel, "module": module}},
+            {
+                "create": {"workspace": workspace, "channel": channel, "module": module, "createdAt": datetime.now()},
+                "update": {},
+            },
         )
 
     async def release_lock(self, workspace: str, channel: str, module: str):
-        return await self._client.lock.delete(
-            {"workspace_channel_module": {"workspace": workspace, "channel": channel, "module": module}}
-        )
+        return await self._client.lock.delete({"lock": {"workspace": workspace, "channel": channel, "module": module}})
 
     async def get_locks(self, workspace: str, channel: str):
         locks = await self._client.lock.find_many(where={"workspace": workspace, "channel": channel})

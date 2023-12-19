@@ -38,5 +38,6 @@ model Lock {
     workspace String
     channel String
     module String
-    @@id([workspace, channel, module])
+    createdAt DateTime
+    @@unique(name: "lock", [workspace, channel, module])
 }
