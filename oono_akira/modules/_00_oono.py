@@ -1,9 +1,9 @@
-from oono_akira.modules import HandlerType, register
+from oono_akira.modules import Handler, register
 from oono_akira.slack import SlackContext
 
 
 @register("/oono")
-def handler(context: SlackContext, locked: bool) -> HandlerType:
+def handler(context: SlackContext, *_) -> Handler:
     return process, {}
 
 

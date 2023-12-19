@@ -1,7 +1,7 @@
 import re
 from typing import List
 
-from oono_akira.modules import HandlerType, register
+from oono_akira.modules import Handler, register
 from oono_akira.slack import SlackContext
 
 _L = "([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲⏜⎴⏞⏠⎛⎜⎝﹁﹃︹︻︗︿︽﹇︷9"
@@ -13,7 +13,7 @@ PAREN_MAPPING = {l: r for l, r in zip(_L, _R)}
 
 
 @register("message")
-def handler(context: SlackContext, locked: bool) -> HandlerType:
+def handler(context: SlackContext, *_) -> Handler:
     event = context.must_event()
     if event.bot_id:
         return

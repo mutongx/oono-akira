@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import Any
 
 import aiohttp
-from oono_akira.modules import HandlerType, register
+from oono_akira.modules import Handler, HandlerConstructorOption, register
 from oono_akira.slack import SlackContext
 
 dict_data_url = "https://github.com/pwxcoo/chinese-xinhua/raw/master/data/idiom.json"
@@ -48,14 +48,14 @@ async def fetch_dict_data():
 
 
 @register("message")
-def handler(context: SlackContext, locked: bool) -> HandlerType:
+def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
     event = context.must_event()
     if event.bot_id:
         return
     if not event.text:
         return
     channel = event.channel
-    if not locked:
+    if not option["locked"]:
         if event.text == "成语接龙":
             asyncio.create_task(fetch_dict_data())
             return process, {"queue": channel, "lock": True}

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 import pytz
-from oono_akira.modules import HandlerType, register
+from oono_akira.modules import Handler, register
 from oono_akira.slack import SlackContext
 
 TIMEZONE = pytz.timezone("Asia/Shanghai")
@@ -71,7 +71,7 @@ def get_message() -> str:
 
 
 @register("message")
-def message_handler(context: SlackContext, locked: bool) -> HandlerType:
+def message_handler(context: SlackContext, *_) -> Handler:
     event = context.must_event()
     if event.bot_id:
         return
@@ -86,7 +86,7 @@ def message_handler(context: SlackContext, locked: bool) -> HandlerType:
 
 
 @register("app_mention")
-def app_mention_handler(context: SlackContext, locked: bool) -> HandlerType:
+def app_mention_handler(context: SlackContext, *_) -> Handler:
     event = context.must_event()
     if event.bot_id:
         return
