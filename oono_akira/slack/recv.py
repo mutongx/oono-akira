@@ -60,20 +60,31 @@ class SlackPayloadParser:
         for field in fields(t):  # type: ignore
             if field.name not in d:
                 continue
-            real_type = field.type
+            pending = None
+            inferred_type = None
             if field.metadata:
                 for (key, value), candidate_type in field.metadata.items():
                     if key in kwargs and kwargs[key] == value:
-                        real_type = candidate_type
+                        inferred_type = candidate_type
                         break
                 else:
                     continue
-            elif getattr(field.type, "_name", None) == "Optional":
-                real_type = field.type.__args__[0]
+            unwrapped_type = field.type
+            if getattr(unwrapped_type, "_name", None) == "Optional":
+                unwrapped_type = unwrapped_type.__args__[0]
+            if getattr(unwrapped_type, "_name", None) == "List":
+                pending = []
+                unwrapped_type = unwrapped_type.__args__[0]
+            real_type = inferred_type or unwrapped_type
             if hasattr(real_type, "__dataclass_fields__"):
-                kwargs[field.name] = SlackPayloadParser._parse(real_type, d[field.name])
+                if isinstance(pending, list):
+                    for item in d[field.name]:
+                        pending.append(SlackPayloadParser._parse(real_type, item))  # type: ignore
+                else:
+                    pending = SlackPayloadParser._parse(real_type, d[field.name])
             else:
-                kwargs[field.name] = d[field.name]
+                pending = d[field.name]
+            kwargs[field.name] = pending
         return t(**kwargs)
 
     @staticmethod
