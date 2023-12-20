@@ -1,5 +1,6 @@
+import sys
 from dataclasses import dataclass, field, fields
-from typing import List, Optional, Type, TypeVar
+from typing import List, Optional, Type, TypeVar, Any
 
 from oono_akira.slack.common import AnyObject, Block
 
@@ -69,7 +70,11 @@ class SlackPayloadParser:
                         break
                 else:
                     continue
+            if getattr(inferred_type, "_name", None) == "Self":
+                inferred_type = t
             unwrapped_type = field.type
+            if isinstance(unwrapped_type, str):
+                unwrapped_type = eval(unwrapped_type, vars(sys.modules[t.__module__]))
             if getattr(unwrapped_type, "_name", None) == "Optional":
                 unwrapped_type = unwrapped_type.__args__[0]
             if getattr(unwrapped_type, "_name", None) == "List":
