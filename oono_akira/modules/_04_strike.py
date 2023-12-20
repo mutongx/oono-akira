@@ -11,16 +11,20 @@ def handler(context: SlackContext, *_) -> Handler:
     if not blocks or len(blocks) != 1:
         return
     block = blocks[0]
-    elements = block.get("elements")
-    if not elements or len(elements) != 1:
+    if block.type != "rich_text":
         return
-    elements = elements[0].get("elements")
-    if not elements or len(elements) != 1:
+    if not block.elements or len(block.elements) != 1:
         return
-    element = elements[0]
-    if element.get("style", {}).get("strike"):
-        context.data = blocks[0]["elements"][0]["elements"][0]["text"]
-        return process, {}
+    section = block.elements[0]
+    if len(section.elements) != 1:
+        return
+    element = section.elements[0]
+    if not element.style or not element.style.strike:
+        return
+    if not element.text:
+        return
+    context.data = element.text 
+    return process, {}
 
 
 async def process(context: SlackContext):
