@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, fields
-from typing import Any, Optional, Type, TypeVar
+from typing import List, Optional, Type, TypeVar
 
-from oono_akira.slack.common import AnyObject
+from oono_akira.slack.common import AnyObject, Block
 
 
 @dataclass
@@ -13,7 +13,7 @@ class SlackEventPayload:
     text: Optional[str] = None
     bot_id: Optional[str] = None
     thread_ts: Optional[str] = None
-    blocks: Optional[Any] = None
+    blocks: Optional[List[Block]] = None
 
 
 @dataclass
