@@ -1,5 +1,8 @@
+from typing import cast
+
 from oono_akira.modules import Handler, register
 from oono_akira.slack import SlackContext
+from oono_akira.slack.common import RichTextSpan
 
 
 @register("message")
@@ -18,12 +21,12 @@ def handler(context: SlackContext, *_) -> Handler:
     section = block.elements[0]
     if len(section.elements) != 1:
         return
-    element = section.elements[0]
+    element = cast(RichTextSpan, section.elements[0])
     if not element.style or not element.style.strike:
         return
     if not element.text:
         return
-    context.data = element.text 
+    context.data = element.text
     return process, {}
 
 
