@@ -14,13 +14,9 @@ from oono_akira.config import Configuration
 from oono_akira.db import OonoDatabase
 from oono_akira.log import log
 from oono_akira.modules import ModulesManager
-from oono_akira.slack import (
-    SlackAPI,
-    SlackContext,
-    SlackEventsApiPayload,
-    SlackSlashCommandsPayload,
-    SlackPayloadParser,
-)
+from oono_akira.slack.context import SlackContext
+from oono_akira.slack.recv import SlackPayloadParser, SlackEventsApiPayload, SlackSlashCommandsPayload
+from oono_akira.slack.send import SlackAPI
 
 
 class OonoAkira:

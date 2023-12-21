@@ -7,7 +7,7 @@ from typing import Any
 
 import aiohttp
 from oono_akira.modules import Handler, HandlerConstructorOption, register
-from oono_akira.slack import SlackContext
+from oono_akira.slack.context import SlackContext
 
 dict_data_url = "https://github.com/pwxcoo/chinese-xinhua/raw/master/data/idiom.json"
 dict_data = None

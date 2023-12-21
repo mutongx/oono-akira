@@ -7,7 +7,7 @@ from collections import OrderedDict
 from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple, OrderedDict, TypedDict, NotRequired
 
 from oono_akira.log import log
-from oono_akira.slack import SlackContext
+from oono_akira.slack.context import SlackContext
 
 Callback = Callable[[], Awaitable[None]]
 HandlerFunction = Callable[[SlackContext], Awaitable[None]]

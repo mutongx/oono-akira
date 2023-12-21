@@ -1,8 +1,9 @@
 import sys
 from dataclasses import dataclass, field, fields
-from typing import List, Optional, Type, TypeVar, Any
+from typing import List, Optional, Type, TypeVar
 
-from oono_akira.slack.common import AnyObject, Block
+from oono_akira.slack.any import AnyObject
+from oono_akira.slack.block import Block
 
 
 @dataclass
@@ -80,13 +81,16 @@ class SlackPayloadParser:
             if getattr(unwrapped_type, "_name", None) == "List":
                 pending = []
                 unwrapped_type = unwrapped_type.__args__[0]
-            real_type = inferred_type or unwrapped_type
-            if hasattr(real_type, "__dataclass_fields__"):
+            dst_type = inferred_type or unwrapped_type
+            src_value = d[field.name]
+            if hasattr(dst_type, "__dataclass_fields__"):
                 if isinstance(pending, list):
-                    for item in d[field.name]:
-                        pending.append(SlackPayloadParser._parse(real_type, item))  # type: ignore
+                    assert isinstance(src_value, list)
+                    for item in src_value:
+                        pending.append(SlackPayloadParser._parse(dst_type, item))  # type: ignore
                 else:
-                    pending = SlackPayloadParser._parse(real_type, d[field.name])
+                    assert isinstance(src_value, dict)
+                    pending = SlackPayloadParser._parse(dst_type, src_value)
             else:
                 pending = d[field.name]
             kwargs[field.name] = pending

@@ -2,7 +2,7 @@ import re
 from typing import List
 
 from oono_akira.modules import Handler, register
-from oono_akira.slack import SlackContext
+from oono_akira.slack.context import SlackContext
 
 _L = "([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲⏜⎴⏞⏠⎛⎜⎝﹁﹃︹︻︗︿︽﹇︷9"
 _R = ")]}）］｝⦆〛⦄”’›»」〉》】〕⦘』〗〙｣⟧⟩⟫⟯⟭⌉⌋⦈⦊❜❞❩❫❵❭❯❱❳⏝⎵⏟⏡⎞⎟⎠﹂﹄︺︼︘﹀︾﹈︸0"

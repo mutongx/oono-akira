@@ -4,7 +4,7 @@ from typing import Any
 
 import pytz
 from oono_akira.modules import Handler, register
-from oono_akira.slack import SlackContext
+from oono_akira.slack.context import SlackContext
 
 TIMEZONE = pytz.timezone("Asia/Shanghai")
 

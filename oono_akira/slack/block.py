@@ -1,7 +1,5 @@
-from typing import Any, Dict, Optional, List, Self
+from typing import Optional, List, Self
 from dataclasses import dataclass, field
-
-AnyObject = Dict[str, Any]
 
 
 @dataclass

@@ -3,7 +3,7 @@ from typing import Any, Optional, Tuple
 from aiohttp import ClientSession
 
 from oono_akira.log import log
-from oono_akira.slack.common import AnyObject
+from oono_akira.slack.any import AnyObject
 
 
 class SlackAPI:

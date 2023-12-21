@@ -1,8 +1,8 @@
 from typing import cast
 
 from oono_akira.modules import Handler, register
-from oono_akira.slack import SlackContext
-from oono_akira.slack.common import RichTextSpan
+from oono_akira.slack.context import SlackContext
+from oono_akira.slack.block import RichTextSpan
 
 
 @register("message")
