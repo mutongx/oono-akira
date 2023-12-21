@@ -1,3 +1,4 @@
 from typing import Mapping, Sequence, Union
 
-AnyObject = Mapping[str, Union[str, int, "AnyObject", Sequence["AnyObject"]]]
+AnyValue = Union[str, int, "AnyObject", Sequence["AnyObject"]]
+AnyObject = Mapping[str, AnyValue]

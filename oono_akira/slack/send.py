@@ -1,9 +1,10 @@
+from dataclasses import fields
 from typing import Any, Tuple, Mapping
 
 from aiohttp import ClientSession
 
 from oono_akira.log import log
-from oono_akira.slack.any import AnyObject
+from oono_akira.slack.any import AnyObject, AnyValue
 
 
 class SlackAPI:
@@ -48,4 +49,25 @@ class SlackAPI:
         result = await resp.json()
         if not result.get("ok"):
             log(f"Error: {result}")
+        return result
+
+
+class SlackPayloadDumper:
+    @staticmethod
+    def dump(d: Any) -> AnyObject:
+        if not hasattr(d, "__dataclass_fields__"):
+            return d
+        result: AnyObject = {}
+        for field in fields(d):  # type: ignore
+            value: AnyValue | None = getattr(d, field.name)
+            if value is None:
+                continue
+            pending: AnyValue | None = None
+            if isinstance(value, list):
+                pending = []
+                for item in value:  # type: ignore
+                    pending.append(SlackPayloadDumper.dump(item))
+            else:
+                pending = SlackPayloadDumper.dump(value)
+            result[field.name] = pending
         return result
