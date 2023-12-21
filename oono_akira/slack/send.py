@@ -8,7 +8,7 @@ from oono_akira.slack.any import AnyObject
 
 class SlackAPI:
     OPTIONS: Mapping[str, Tuple[str, str | None]] = {
-        "oauth.v2.access": ("post",         "application/x-www-form-urlencoded"),
+        "oauth.v2.access": ("post", "application/x-www-form-urlencoded"),
         "users.info": ("get", None),
     }
 
