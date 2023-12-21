@@ -1,3 +1,3 @@
-from typing import Mapping, List
+from typing import Mapping, Sequence
 
-AnyObject = Mapping[str, str | int | "AnyObject" | List["AnyObject"]]
+AnyObject = Mapping[str, str | int | "AnyObject" | Sequence["AnyObject"]]

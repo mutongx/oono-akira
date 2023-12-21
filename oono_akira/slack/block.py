@@ -1,4 +1,4 @@
-from typing import Optional, List, Self
+from typing import Optional, Sequence, Self
 from dataclasses import dataclass, field
 
 
@@ -23,7 +23,7 @@ class RichTextSpan:
 @dataclass
 class RichTextElement:
     type: str
-    elements: "List[RichTextSpan | RichTextElement]" = field(
+    elements: "Sequence[RichTextSpan | RichTextElement]" = field(
         metadata={
             ("type", "rich_text_section"): RichTextSpan,
             ("type", "rich_text_quote"): RichTextSpan,
@@ -39,7 +39,7 @@ class RichTextElement:
 @dataclass
 class Block:
     type: str
-    elements: Optional[List[RichTextElement]] = field(
+    elements: Optional[Sequence[RichTextElement]] = field(
         default=None,
         metadata={
             ("type", "rich_text"): RichTextElement,

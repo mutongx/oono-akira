@@ -1,6 +1,6 @@
 import sys
 from dataclasses import dataclass, field, fields
-from typing import List, Optional, Type, TypeVar
+from typing import Sequence, Optional, Type, TypeVar
 
 from oono_akira.slack.any import AnyObject
 from oono_akira.slack.block import Block
@@ -15,7 +15,7 @@ class SlackEventPayload:
     text: Optional[str] = None
     bot_id: Optional[str] = None
     thread_ts: Optional[str] = None
-    blocks: Optional[List[Block]] = None
+    blocks: Optional[Sequence[Block]] = None
 
 
 @dataclass
@@ -78,7 +78,7 @@ class SlackPayloadParser:
                 unwrapped_type = eval(unwrapped_type, vars(sys.modules[t.__module__]))
             if getattr(unwrapped_type, "_name", None) == "Optional":
                 unwrapped_type = unwrapped_type.__args__[0]
-            if getattr(unwrapped_type, "_name", None) == "List":
+            if getattr(unwrapped_type, "_name", None) == "Sequence":
                 pending = []
                 unwrapped_type = unwrapped_type.__args__[0]
             dst_type = inferred_type or unwrapped_type

@@ -5,7 +5,7 @@ import time
 import traceback
 from collections import deque
 from contextlib import AsyncExitStack
-from typing import Any, Deque, Dict, Optional, Tuple, Set, Coroutine
+from typing import Any, Deque, MutableMapping, Tuple, Set, Coroutine
 
 from aiohttp import ClientSession, web
 from aiohttp.web_request import Request
@@ -45,7 +45,7 @@ class OonoAkira:
         self._web_app.add_routes([web.get(f"{server.get('prefix', '')}/install", self._install_handler)])
         self._web_port = server.get("port", 25472)
 
-        self._payload_tracker: Dict[str, str] = dict()
+        self._payload_tracker: MutableMapping[str, str] = dict()
         self._payload_tracker_queue: Deque[str] = deque()
 
         self._background_tasks: Set[asyncio.Task[Any]] = set()
@@ -177,7 +177,7 @@ class OonoAkira:
             except Exception:
                 traceback.print_exc()
 
-    def _track_payload(self, track_id: str, processor: str, *, update: bool = False) -> Optional[str]:
+    def _track_payload(self, track_id: str, processor: str, *, update: bool = False) -> str | None:
         # When update is True, we should never add new values to tracker
         if update:
             if track_id in self._payload_tracker:

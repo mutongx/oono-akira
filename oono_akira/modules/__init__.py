@@ -4,7 +4,7 @@ import os
 import re
 import traceback
 from collections import OrderedDict
-from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Tuple, OrderedDict, TypedDict, NotRequired
+from typing import Awaitable, Callable, MutableMapping, MutableSequence, Iterable, Tuple, TypedDict, NotRequired
 
 from oono_akira.log import log
 from oono_akira.slack.context import SlackContext
@@ -12,14 +12,14 @@ from oono_akira.slack.context import SlackContext
 Callback = Callable[[], Awaitable[None]]
 HandlerFunction = Callable[[SlackContext], Awaitable[None]]
 HandlerOption = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
-Handler = Optional[Tuple[HandlerFunction, HandlerOption]]
+Handler = Tuple[HandlerFunction, HandlerOption] | None
 HandlerConstructorOption = TypedDict("HandlerConstructorOption", locked=bool, granted=bool)
 HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Handler]
 
 
 class ModulesManager:
-    CAPABILITIES: Dict[str, List[HandlerConstructor]] = {}
-    CAPABILITIES_MAPPING: Dict[str, Dict[str, HandlerConstructor]] = {}
+    CAPABILITIES: MutableMapping[str, MutableSequence[HandlerConstructor]] = {}
+    CAPABILITIES_MAPPING: MutableMapping[str, MutableMapping[str, HandlerConstructor]] = {}
 
     @staticmethod
     def register(type: str) -> Callable[[HandlerConstructor], HandlerConstructor]:
@@ -36,9 +36,9 @@ class ModulesManager:
 
     def __init__(self) -> None:
         # Module import to module name
-        self._modules_mapping: Dict[str, str] = {}
+        self._modules_mapping: MutableMapping[str, str] = {}
         # Module name to module import
-        modules: OrderedDict[str, str] = OrderedDict()
+        modules: MutableMapping[str, str] = OrderedDict()
         location = os.path.dirname(__file__)
         for file in sorted(os.listdir(location)):
             if "__" in file:
@@ -58,11 +58,11 @@ class ModulesManager:
         log(f"Finished loading module at {location}")
 
     async def __aenter__(self):
-        self._queue: Dict[
+        self._queue: MutableMapping[
             str,
             asyncio.Queue[Tuple[SlackContext, HandlerFunction, Callback | None] | None],
         ] = {}
-        self._future: Dict[str, asyncio.Task[None]] = {}
+        self._future: MutableMapping[str, asyncio.Task[None]] = {}
         return self
 
     async def __aexit__(self, *_):
@@ -81,7 +81,7 @@ class ModulesManager:
         name: str,
         context: SlackContext,
         handler_func: HandlerFunction,
-        callback_func: Optional[Callback] = None,
+        callback_func: Callback | None = None,
     ):
         self._ensure_queue(name)
         await self._queue[name].put((context, handler_func, callback_func))

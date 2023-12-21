@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import MutableSequence
 
 from oono_akira.modules import Handler, register
 from oono_akira.slack.context import SlackContext
@@ -19,7 +19,7 @@ def handler(context: SlackContext, *_) -> Handler:
         return
     if not event.text:
         return
-    stack: List[str] = []
+    stack: MutableSequence[str] = []
     for char in re.sub(r"<@[0-9A-Za-z]+>", "", event.text):
         if char in PAREN_MAPPING:
             stack.append(PAREN_MAPPING[char])

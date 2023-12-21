@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Awaitable, Optional, Protocol
+from typing import Any, Awaitable, Protocol
 
 from prisma.models import Workspace
 
@@ -20,8 +20,8 @@ class SlackContext:
     db: OonoDatabase
     ack: SlackAckFunction
     workspace: Workspace
-    event: Optional[SlackEventPayload] = None
-    command: Optional[SlackSlashCommandsPayload] = None
+    event: SlackEventPayload | None = None
+    command: SlackSlashCommandsPayload | None = None
     data: Any = None
 
     def must_event(self):

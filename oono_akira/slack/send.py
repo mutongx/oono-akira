@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Tuple
 
 from aiohttp import ClientSession
 
@@ -20,7 +20,7 @@ class SlackAPI:
     def __init__(
         self,
         session: ClientSession,
-        token: Optional[str] = None,
+        token: str | None = None,
         path: Tuple[str, ...] = tuple(),
     ):
         self._session = session
@@ -30,7 +30,7 @@ class SlackAPI:
     def __getattr__(self, key: str):
         return SlackAPI(self._session, self._token, self._path + (key,))
 
-    async def __call__(self, __data: Optional[AnyObject] = None, **kwargs: Any) -> Any:
+    async def __call__(self, __data: AnyObject | None = None, **kwargs: Any) -> Any:
         # Prepare request payload
         payload: AnyObject = dict(**__data if __data else {}, **kwargs)
         headers: AnyObject = {}

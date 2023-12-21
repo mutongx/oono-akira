@@ -1,4 +1,4 @@
-from typing import List, TypedDict
+from typing import Sequence, TypedDict
 
 
 class ServerSslConfiguration(TypedDict):
@@ -21,7 +21,7 @@ class SlackConfiguration(TypedDict):
     client_secret: str
     redirect_uri: str
     token: str
-    permissions: List[str]
+    permissions: Sequence[str]
 
 
 class Configuration(TypedDict):
