@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Tuple, Mapping
 
 from aiohttp import ClientSession
 
@@ -7,14 +7,9 @@ from oono_akira.slack.any import AnyObject
 
 
 class SlackAPI:
-    _REQ = {
-        "oauth.v2.access": {
-            "method": "post",
-            "mime": "application/x-www-form-urlencoded",
-        },
-        "users.info": {
-            "method": "get",
-        },
+    OPTIONS: Mapping[str, Tuple[str, str | None]] = {
+        "oauth.v2.access": ("post",         "application/x-www-form-urlencoded"),
+        "users.info": ("get", None),
     }
 
     def __init__(
@@ -36,11 +31,9 @@ class SlackAPI:
         headers: AnyObject = {}
         # Prepare request argument
         api = ".".join(self._path)
-        req = self._REQ.get(api, {})
-        method = req.get("method", "post")
+        method, mime = self.OPTIONS.get(api, ("post", "application/json"))
         body = {}
         if method == "post":
-            mime = req.get("mime", "application/json")
             headers = {"Content-Type": f"{mime}; charset=UTF-8"}
             if mime == "application/x-www-form-urlencoded":
                 body["data"] = payload
