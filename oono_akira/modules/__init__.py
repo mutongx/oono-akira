@@ -11,9 +11,9 @@ from oono_akira.slack.context import SlackContext
 
 Callback = Callable[[], Awaitable[None]]
 HandlerFunction = Callable[[SlackContext], Awaitable[None]]
-HandlerOption = TypedDict("HandlerOption", queue=NotRequired[str], lock=NotRequired[bool])
+HandlerOption = TypedDict("HandlerOption", {"queue": NotRequired[str], "lock": NotRequired[bool]})
 Handler = Tuple[HandlerFunction, HandlerOption] | None
-HandlerConstructorOption = TypedDict("HandlerConstructorOption", locked=bool, granted=bool)
+HandlerConstructorOption = TypedDict("HandlerConstructorOption", {"locked": bool, "granted": bool})
 HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Handler]
 
 
