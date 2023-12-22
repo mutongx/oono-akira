@@ -1,7 +1,7 @@
 import os
 import re
 import importlib
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, Action
 from typing import Mapping, Callable, NoReturn, Awaitable, TypedDict
 
 from oono_akira.slack.context import SlackContext
@@ -27,6 +27,11 @@ class OonoAdminException(Exception):
         return self._message
 
 
+class OonoHelpAction(Action):
+    def __call__(self, parser: ArgumentParser, *_):
+        raise OonoAdminException(parser.format_help())
+
+
 class OonoAdminArgumentParser(ArgumentParser):
     def error(self, message: str) -> NoReturn:
         raise OonoAdminException(message)
@@ -47,7 +52,8 @@ def get_parser():
             module_import = f"oono_akira.admin.{match.group(1)}"
             module = importlib.import_module(module_import)
             subparser = subparsers.add_parser(module_name, description=module.desc(), add_help=False)
-            subparser.add_argument("-h", "--help", action="store_true")
+            subparser.register("action", "oono_help", OonoHelpAction)
+            subparser.add_argument("-h", "--help", nargs=0, action="oono_help")
             module.setup(subparser)
             commands[module_name] = {"parser": subparser, "handler": module.handler}
     return parser
