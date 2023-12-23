@@ -96,4 +96,4 @@ if __name__ == "__main__":
     import asyncio
     import sys
 
-    asyncio.run(run_command(None, "!", "2", "3", sys.argv[1:]))
+    asyncio.run(run_command(None, "", "", "", sys.argv[1:]))
