@@ -41,21 +41,23 @@ def get_parser():
     global parser, commands
     if parser is None:
         parser = OonoAdminArgumentParser(prog="/oono", add_help=False)
-        subparsers = parser.add_subparsers(dest="command")
+        parser.register("action", "oono_help", OonoHelpAction)
+        parser.add_argument("-h", "--help", nargs=0, action="oono_help", help="Display help message.")
+        subparsers = parser.add_subparsers(dest="command", metavar="<command>")
         for file in os.listdir(os.path.dirname(__file__)):
             if "__" in file:
                 continue
             match = re.fullmatch(r"(_cmd_([0-9a-z_]+))\.py", file)
             if not match:
                 continue
-            module_name = match.group(2)
-            module_import = f"oono_akira.admin.{match.group(1)}"
-            module = importlib.import_module(module_import)
-            subparser = subparsers.add_parser(module_name, description=module.desc(), add_help=False)
+            mod_name = match.group(2)
+            mod_import = f"oono_akira.admin.{match.group(1)}"
+            mod = importlib.import_module(mod_import)
+            subparser = subparsers.add_parser(mod_name, help=mod.desc(), description=mod.desc(), add_help=False)
             subparser.register("action", "oono_help", OonoHelpAction)
-            subparser.add_argument("-h", "--help", nargs=0, action="oono_help")
-            module.setup(subparser)
-            commands[module_name] = {"parser": subparser, "handler": module.handler}
+            subparser.add_argument("-h", "--help", nargs=0, action="oono_help", help="Display help message.")
+            mod.setup(subparser)
+            commands[mod_name] = {"parser": subparser, "handler": mod.handler}
     return parser
 
 
