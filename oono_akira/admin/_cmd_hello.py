@@ -5,12 +5,12 @@ from oono_akira.slack.send import SlackPayloadDumper
 from oono_akira.slack.block import Block, RichTextElement, RichTextSpan
 
 
-def desc():
+def help():
     return "Say hello to Oono Akira"
 
 
 def setup(parser: ArgumentParser):
-    pass
+    parser.description = "Say hello to Oono Akira! She will give you some useful information."
 
 
 async def handler(context: SlackContext | None, args: Namespace):

@@ -53,7 +53,7 @@ def get_parser():
             mod_name = match.group(2)
             mod_import = f"oono_akira.admin.{match.group(1)}"
             mod = importlib.import_module(mod_import)
-            subparser = subparsers.add_parser(mod_name, help=mod.desc(), description=mod.desc(), add_help=False)
+            subparser = subparsers.add_parser(mod_name, help=mod.help(), add_help=False)
             subparser.register("action", "oono_help", OonoHelpAction)
             subparser.add_argument("-h", "--help", nargs=0, action="oono_help", help="Display help message")
             mod.setup(subparser)
