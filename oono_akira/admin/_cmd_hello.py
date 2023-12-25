@@ -6,7 +6,7 @@ from oono_akira.slack.block import Block, RichTextElement, RichTextSpan
 
 
 def desc():
-    return "Say hello to Oono Akira!"
+    return "Say hello to Oono Akira"
 
 
 def setup(parser: ArgumentParser):
