@@ -3,15 +3,19 @@ import re
 import importlib
 import shlex
 from argparse import ArgumentParser, Namespace, Action
-from typing import Mapping, Callable, NoReturn, Awaitable, TypedDict
+from typing import Mapping, Callable, NoReturn, Awaitable, TypedDict, Literal
 
 from oono_akira.slack.context import SlackContext
+from oono_akira.slack.block import Block
+from oono_akira.slack.send import SlackPayloadDumper
 
+
+CommandResponse = tuple[Literal["message"], str, list[Block]] | None
 Command = TypedDict(
     "Command",
     {
         "parser": ArgumentParser,
-        "handler": Callable[[SlackContext | None, Namespace], Awaitable[None]],
+        "handler": Callable[[SlackContext | None, Namespace], Awaitable[CommandResponse]],
     },
 )
 
@@ -74,7 +78,23 @@ async def run_command(context: SlackContext | None, workspace: str, channel: str
         parsed_args.workspace = workspace
         parsed_args.channel = channel
         parsed_args.user = user
-        await commands[parsed_args.command]["handler"](context, parsed_args)
+        response = await commands[parsed_args.command]["handler"](context, parsed_args)
+        if response is None:
+            return
+        action, text, blocks = response
+        if action == "message":
+            if context is None:
+                print(text)
+                return
+            await context.api.chat.postEphemeral(
+                {
+                    "channel": channel,
+                    "user": user,
+                    "text": text,
+                    "blocks": [SlackPayloadDumper.dump(block) for block in blocks],
+                }
+            )
+            return
     except OonoAdminException as e:
         if context is None:
             print(e.message, end="")
@@ -88,14 +108,21 @@ async def run_command(context: SlackContext | None, workspace: str, channel: str
                     {
                         "type": "rich_text",
                         "elements": [
-                            {"type": "rich_text_preformatted", "elements": [
-                                {"type": "text", "text": f"# /oono {command_text}\n{e.message}"}
-                            ]}
+                            {
+                                "type": "rich_text_preformatted",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": f"# /oono {command_text}\n{e.message}",
+                                    }
+                                ],
+                            }
                         ],
                     }
                 ],
             }
         )
+        return
 
 
 if __name__ == "__main__":
