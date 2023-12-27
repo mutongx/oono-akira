@@ -5,7 +5,7 @@ import time
 import traceback
 from collections import deque
 from contextlib import AsyncExitStack
-from typing import Any, Deque, MutableMapping, Tuple, Set, Coroutine
+from typing import Any, MutableMapping, Coroutine
 
 from aiohttp import ClientSession, web
 from aiohttp.web_request import Request
@@ -46,12 +46,12 @@ class OonoAkira:
         self._web_port = server.get("port", 25472)
 
         self._payload_tracker: MutableMapping[str, str] = dict()
-        self._payload_tracker_queue: Deque[str] = deque()
+        self._payload_tracker_queue: deque[str] = deque()
 
-        self._background_tasks: Set[asyncio.Task[Any]] = set()
+        self._background_tasks: set[asyncio.Task[Any]] = set()
 
     async def __aenter__(self):
-        self._ack_queue: asyncio.Queue[Tuple[str, Any]] = asyncio.Queue()
+        self._ack_queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
 
         async with AsyncExitStack() as stack:
             self._db = await stack.enter_async_context(OonoDatabase(self._db_config))

@@ -4,7 +4,7 @@ import os
 import re
 import traceback
 from collections import OrderedDict
-from typing import Awaitable, Callable, MutableMapping, MutableSequence, Iterable, Tuple, TypedDict, NotRequired
+from typing import Awaitable, Callable, MutableMapping, MutableSequence, Iterable, TypedDict, NotRequired
 
 from oono_akira.log import log
 from oono_akira.slack.context import SlackContext
@@ -12,7 +12,7 @@ from oono_akira.slack.context import SlackContext
 Callback = Callable[[], Awaitable[None]]
 HandlerFunction = Callable[[SlackContext], Awaitable[None]]
 HandlerOption = TypedDict("HandlerOption", {"queue": NotRequired[str], "lock": NotRequired[bool]})
-Handler = Tuple[HandlerFunction, HandlerOption] | None
+Handler = tuple[HandlerFunction, HandlerOption] | None
 HandlerConstructorOption = TypedDict("HandlerConstructorOption", {"is_locked": bool, "has_access": bool})
 HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Handler]
 
@@ -60,7 +60,7 @@ class ModulesManager:
     async def __aenter__(self):
         self._queue: MutableMapping[
             str,
-            asyncio.Queue[Tuple[SlackContext, HandlerFunction, Callback | None] | None],
+            asyncio.Queue[tuple[SlackContext, HandlerFunction, Callback | None] | None],
         ] = {}
         self._future: MutableMapping[str, asyncio.Task[None]] = {}
         return self
@@ -71,7 +71,7 @@ class ModulesManager:
         for future in self._future.values():
             await future
 
-    def iterate_modules(self, capability: str) -> Iterable[Tuple[str, HandlerConstructor]]:
+    def iterate_modules(self, capability: str) -> Iterable[tuple[str, HandlerConstructor]]:
         if capability in self.CAPABILITIES:
             for item in self.CAPABILITIES[capability]:
                 yield self._modules_mapping[item.__module__], item

@@ -1,5 +1,5 @@
 from dataclasses import fields
-from typing import Any, Tuple, Mapping
+from typing import Any, Mapping
 
 from aiohttp import ClientSession
 
@@ -8,7 +8,7 @@ from oono_akira.slack.any import AnyObject, AnyValue
 
 
 class SlackAPI:
-    OPTIONS: Mapping[str, Tuple[str, str | None]] = {
+    OPTIONS: Mapping[str, tuple[str, str | None]] = {
         "oauth.v2.access": ("post", "application/x-www-form-urlencoded"),
         "users.info": ("get", None),
     }
@@ -17,7 +17,7 @@ class SlackAPI:
         self,
         session: ClientSession,
         token: str | None = None,
-        path: Tuple[str, ...] = tuple(),
+        path: tuple[str, ...] = tuple(),
     ):
         self._session = session
         self._token = token
