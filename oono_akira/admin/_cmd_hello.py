@@ -1,8 +1,8 @@
 from argparse import ArgumentParser, Namespace
 
 from oono_akira.slack.context import SlackContext
-from oono_akira.slack.send import SlackPayloadDumper
 from oono_akira.slack.block import Block, RichTextElement, RichTextSpan
+from oono_akira.admin import CommandResponse
 
 
 def help():
@@ -13,9 +13,9 @@ def setup(parser: ArgumentParser):
     parser.description = "Say hello to Oono Akira! She will give you some useful information."
 
 
-async def handler(context: SlackContext | None, args: Namespace):
+async def handler(context: SlackContext | None, args: Namespace) -> CommandResponse:
     if context is None:
-        return
+        return "message", "Hello from Oono Akira!", []
     command = context.must_command()
     block = Block(
         type="rich_text",
@@ -69,11 +69,4 @@ async def handler(context: SlackContext | None, args: Namespace):
             ),
         ],
     )
-    await context.api.chat.postEphemeral(
-        {
-            "channel": command.channel_id,
-            "user": command.user_id,
-            "text": "Hello from Oono Akira!",
-            "blocks": [SlackPayloadDumper.dump(block)],
-        }
-    )
+    return "message", "Hello from Oono Akira!", [block]
