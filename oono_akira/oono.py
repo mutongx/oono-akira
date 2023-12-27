@@ -215,14 +215,14 @@ class OonoAkira:
             event=payload.event,
         )
 
-        locks, grants = await asyncio.gather(
+        locks, accesses = await asyncio.gather(
             self._db.get_locks(workspace.id, payload.event.channel),
-            self._db.get_grants(workspace.id, payload.event.channel, payload.event.user),
+            self._db.get_accesses(workspace.id, payload.event.channel, payload.event.user),
         )
         for module, constructor in self._modules.iterate_modules(payload.event.type):
             if locks and module not in locks:
                 continue
-            handler = constructor(context, {"locked": module in locks, "granted": module in grants})
+            handler = constructor(context, {"is_locked": module in locks, "has_access": module in accesses})
             if handler is not None:
                 break
         else:
@@ -260,12 +260,12 @@ class OonoAkira:
             command=payload,
         )
 
-        locks, grants = await asyncio.gather(
+        locks, accesses = await asyncio.gather(
             self._db.get_locks(workspace.id, payload.channel_id),
-            self._db.get_grants(workspace.id, payload.channel_id, payload.user_id),
+            self._db.get_accesses(workspace.id, payload.channel_id, payload.user_id),
         )
         for module, constructor in self._modules.iterate_modules(payload.command):
-            handler = constructor(context, {"locked": module in locks, "granted": module in grants})
+            handler = constructor(context, {"is_locked": module in locks, "has_access": module in accesses})
             if handler is not None:
                 break
         else:

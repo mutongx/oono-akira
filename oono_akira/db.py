@@ -61,10 +61,10 @@ class OonoDatabase:
             },
         )
 
-    async def add_grant(self, workspace: str, channel: str, user: str, module: str):
-        return await self._client.grant.upsert(
+    async def grant_access(self, workspace: str, channel: str, user: str, module: str):
+        return await self._client.access.upsert(
             where={
-                "grant": {
+                "access": {
                     "workspace": workspace,
                     "channel": channel,
                     "user": user,
@@ -82,11 +82,11 @@ class OonoDatabase:
             },
         )
 
-    async def revoke_grant(self, workspace: str, channel: str | None, user: str | None, module: str):
+    async def revoke_access(self, workspace: str, channel: str | None, user: str | None, module: str):
         if channel is not None and user is not None:
-            await self._client.grant.delete(
+            await self._client.access.delete(
                 where={
-                    "grant": {
+                    "access": {
                         "workspace": workspace,
                         "channel": channel,
                         "user": user,
@@ -95,14 +95,14 @@ class OonoDatabase:
                 }
             )
         if channel is None and user is None:
-            await self._client.grant.delete_many(
+            await self._client.access.delete_many(
                 where={
                     "workspace": workspace,
                     "module": module,
                 }
             )
         if channel is not None and user is None:
-            await self._client.grant.delete_many(
+            await self._client.access.delete_many(
                 where={
                     "workspace": workspace,
                     "channel": channel,
@@ -110,7 +110,7 @@ class OonoDatabase:
                 }
             )
         if channel is None and user is not None:
-            await self._client.grant.delete_many(
+            await self._client.access.delete_many(
                 where={
                     "workspace": workspace,
                     "user": user,
@@ -118,15 +118,15 @@ class OonoDatabase:
                 }
             )
 
-    async def get_grants(self, workspace: str, channel: str, user: str):
-        grants = await self._client.grant.find_many(
+    async def get_accesses(self, workspace: str, channel: str, user: str):
+        accesses = await self._client.access.find_many(
             where={
                 "workspace": workspace,
                 "channel": {"in": [channel, ""]},
                 "user": {"in": [user, ""]},
             }
         )
-        return set([grant.module for grant in grants])
+        return set([access.module for access in accesses])
 
     async def acquire_lock(self, workspace: str, channel: str, module: str):
         return await self._client.lock.upsert(

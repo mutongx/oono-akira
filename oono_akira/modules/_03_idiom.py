@@ -55,7 +55,7 @@ def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
     if not event.text:
         return
     channel = event.channel
-    if not option["locked"]:
+    if not option["is_locked"]:
         if event.text == "成语接龙":
             asyncio.create_task(fetch_dict_data())
             return process, {"queue": channel, "lock": True}
