@@ -1,6 +1,7 @@
 import os
 import re
 import importlib
+import shlex
 from argparse import ArgumentParser, Namespace, Action
 from typing import Mapping, Callable, NoReturn, Awaitable, TypedDict
 
@@ -61,8 +62,9 @@ def get_parser():
     return parser
 
 
-async def run_command(context: SlackContext | None, workspace: str, channel: str, user: str, args: list[str]):
+async def run_command(context: SlackContext | None, workspace: str, channel: str, user: str, command_text: str):
     try:
+        args = shlex.split(command_text)
         parsed_args = get_parser().parse_args(args)
         if parsed_args.command is None:
             raise OonoAdminException(get_parser().format_usage())
@@ -86,7 +88,9 @@ async def run_command(context: SlackContext | None, workspace: str, channel: str
                     {
                         "type": "rich_text",
                         "elements": [
-                            {"type": "rich_text_preformatted", "elements": [{"type": "text", "text": e.message}]}
+                            {"type": "rich_text_preformatted", "elements": [
+                                {"type": "text", "text": f"# /oono {command_text}\n{e.message}"}
+                            ]}
                         ],
                     }
                 ],
@@ -98,4 +102,4 @@ if __name__ == "__main__":
     import asyncio
     import sys
 
-    asyncio.run(run_command(None, "", "", "", sys.argv[1:]))
+    asyncio.run(run_command(None, "", "", "", shlex.join(sys.argv[1:])))
