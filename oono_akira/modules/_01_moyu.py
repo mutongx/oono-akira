@@ -98,11 +98,7 @@ def app_mention_handler(context: SlackContext, *_) -> Handler:
 
 async def process(context: SlackContext):
     await context.ack()
-    event = context.must_event()
-    body = {
-        "channel": event.channel,
-        "text": get_message(),
-    }
-    if event.thread_ts:
-        body["thread_ts"] = event.thread_ts
-    await context.api.chat.postMessage(body)
+    await context.api.chat.postMessage({
+        **context.reply_args(),
+        "text": get_message()
+    })

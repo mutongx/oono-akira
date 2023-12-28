@@ -33,14 +33,10 @@ def handler(context: SlackContext, *_) -> Handler:
 async def process(context: SlackContext):
     await context.ack()
     event = context.must_event()
-    user_id = event.user
-    if user_id == "USLACKBOT":
+    if event.user == "USLACKBOT":
         return
-    profile = await context.api.users.info({"user": user_id})
-    body = {
-        "channel": event.channel,
+    profile = await context.api.users.info({"user": event.user})
+    await context.api.chat.postMessage({
+        **context.reply_args(),
         "text": f"( ｣ﾟДﾟ)｣＜ {profile['user']['profile']['display_name']} 刚才说了 {context.data}！",
-    }
-    if event.thread_ts:
-        body["thread_ts"] = event.thread_ts
-    await context.api.chat.postMessage(body)
+    })

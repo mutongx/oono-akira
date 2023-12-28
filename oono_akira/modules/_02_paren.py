@@ -33,11 +33,7 @@ def handler(context: SlackContext, *_) -> Handler:
 
 async def process(context: SlackContext):
     await context.ack()
-    event = context.must_event()
-    body = {
-        "channel": event.channel,
+    await context.api.chat.postMessage({
+        **context.reply_args(),
         "text": "".join(reversed(context.data)) + " ○(￣^￣○)",
-    }
-    if event.thread_ts:
-        body["thread_ts"] = event.thread_ts
-    await context.api.chat.postMessage(body)
+    })
