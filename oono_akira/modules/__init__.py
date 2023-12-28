@@ -19,6 +19,7 @@ HandlerConstructor = Callable[[SlackContext, HandlerConstructorOption], Handler]
 ExecutorQueue = asyncio.Queue[tuple[SlackContext, HandlerFunction, Callback | None] | None]
 ExecutorTask = asyncio.Task[None]
 
+
 class ModulesManager:
     CAPABILITIES: MutableMapping[str, MutableSequence[HandlerConstructor]] = {}
     CAPABILITIES_MAPPING: MutableMapping[str, MutableMapping[str, HandlerConstructor]] = {}
@@ -60,13 +61,12 @@ class ModulesManager:
         log(f"Finished loading module at {location}")
 
     async def __aenter__(self):
-        self._executor: MutableMapping[str,tuple[ExecutorQueue, ExecutorTask]] = {}
+        self._queues: MutableMapping[str, ExecutorQueue] = {}
+        self._tasks: set[ExecutorTask] = set()
         return self
 
     async def __aexit__(self, *_):
-        for queue, task in self._executor.values():
-            await queue.put(None)
-            await task
+        await asyncio.gather((queue.put(None) for queue in self._queues.values()), *self._tasks)
 
     def iterate_modules(self, capability: str) -> Iterable[tuple[str, HandlerConstructor]]:
         if capability in self.CAPABILITIES:
@@ -80,21 +80,21 @@ class ModulesManager:
         handler_func: HandlerFunction,
         callback_func: Callback | None = None,
     ):
-        self._ensure_queue(name)
-        await self._executor[name][0].put((context, handler_func, callback_func))
+        await self._ensure_queue(name).put((context, handler_func, callback_func))
 
     def _ensure_queue(self, name: str):
-        if name not in self._executor:
+        if name not in self._queues:
             queue: ExecutorQueue = asyncio.Queue()
-            task: ExecutorTask = asyncio.create_task(self._run(name, queue), name=name)
-            self._executor[name] = (queue, task)
-            task.add_done_callback(lambda task: self._delete_queue(task.get_name()))
+            self._queues[name] = queue
+            task: ExecutorTask = asyncio.create_task(self._run(name))
+            self._tasks.add(task)
+            task.add_done_callback(self._tasks.remove)
+            return queue
+        return self._queues[name]
 
-    def _delete_queue(self, name: str):
-        del self._executor[name]
-
-    async def _run(self, name: str, queue: ExecutorQueue):
+    async def _run(self, name: str):
         log(f"Executor started, name={name}")
+        queue = self._queues[name]
         while True:
             try:
                 async with asyncio.timeout(60):
@@ -112,6 +112,7 @@ class ModulesManager:
                     await callback_func()
             except Exception:
                 traceback.print_exc()
+        del self._queues[name]
 
 
 register = ModulesManager.register
