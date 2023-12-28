@@ -207,21 +207,16 @@ class OonoDatabase:
         key = ",".join(f"{key}={value}" for key, value in sorted(kwargs.items()))
         session = await self._client.session.upsert(
             where={"key": key},
-            data={
-                "create": {
-                    "key": key,
-                    "content": "{}",
-                },
-                "update": {},
-            },
+            data={"create": {"key": key, "content": "{}"}, "update": {}},
         )
         data = json.loads(session.content)
         yield data
-        await self._client.session.update(
-            where={
-                "key": key,
-            },
-            data={
-                "content": json.dumps(data),
-            },
-        )
+        if data:
+            await self._client.session.update(
+                where={"key": key},
+                data={"content": json.dumps(data)},
+            )
+        else:
+            await self._client.session.delete(
+                where={"key": key},
+            )
