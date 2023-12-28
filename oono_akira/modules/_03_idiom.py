@@ -86,10 +86,12 @@ async def process(context: SlackContext):
             session["word"] = response_word
         elif text == "不玩了":
             response_text = "祝你身体健康"
+            session.clear()
         elif text == "不会":
             begin = session["word"]["pinyin_normalized"][-1]
             if begin not in dictionary["begin"]:
                 response_text = "草，我也不会"
+                session.clear()
             else:
                 response_word = random.choice(dictionary["begin"][begin])
                 session["word"] = response_word
@@ -103,6 +105,7 @@ async def process(context: SlackContext):
                 begin = user_word["pinyin_normalized"][-1]
                 if begin not in dictionary["begin"]:
                     response_text = "给我整不会了"
+                    session.clear()
                 else:
                     response_word = random.choice(dictionary["begin"][begin])
                     session["word"] = response_word
