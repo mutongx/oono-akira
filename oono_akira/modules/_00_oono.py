@@ -10,6 +10,4 @@ def handler(context: SlackContext, *_) -> Handler:
 
 async def process(context: SlackContext):
     await context.ack()
-
-    command = context.must_command()
-    await run_command(context, command.team_id, command.channel_id, command.user_id, command.text)
+    await run_command(context, context.must_command().text)
