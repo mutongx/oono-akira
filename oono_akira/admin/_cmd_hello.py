@@ -72,8 +72,8 @@ async def handler(context: SlackContext | None, args: Namespace) -> CommandRespo
                 type="rich_text_preformatted",
                 elements=[
                     RichTextSpan(type="text", text=str(args.args)),
-                ]
-            )
+                ],
+            ),
         ],
     )
     return "message", "Hello from Oono Akira!", [block]
