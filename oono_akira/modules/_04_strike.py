@@ -1,12 +1,14 @@
 from typing import cast
 
-from oono_akira.modules import Handler, register
+from oono_akira.modules import Handler, HandlerConstructorOption, register
 from oono_akira.slack.context import SlackContext
 from oono_akira.slack.block import RichTextSpan
 
 
 @register("message")
-def handler(context: SlackContext, *_) -> Handler:
+def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
+    if not option["has_access"]:
+        return
     event = context.must_event()
     if event.bot_id:
         return
@@ -36,7 +38,9 @@ async def process(context: SlackContext):
     if event.user == "USLACKBOT":
         return
     profile = await context.api.users.info({"user": event.user})
-    await context.api.chat.postMessage({
-        **context.reply_args(),
-        "text": f"( ｣ﾟДﾟ)｣＜ {profile['user']['profile']['display_name']} 刚才说了 {context.data}！",
-    })
+    await context.api.chat.postMessage(
+        {
+            **context.reply_args(),
+            "text": f"( ｣ﾟДﾟ)｣＜ {profile['user']['profile']['display_name']} 刚才说了 {context.data}！",
+        }
+    )

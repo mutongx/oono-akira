@@ -1,7 +1,7 @@
 import re
 from typing import MutableSequence
 
-from oono_akira.modules import Handler, register
+from oono_akira.modules import Handler, HandlerConstructorOption, register
 from oono_akira.slack.context import SlackContext
 
 _L = "([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲⏜⎴⏞⏠⎛⎜⎝﹁﹃︹︻︗︿︽﹇︷9"
@@ -13,7 +13,9 @@ PAREN_MAPPING = {l: r for l, r in zip(_L, _R)}
 
 
 @register("message")
-def handler(context: SlackContext, *_) -> Handler:
+def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
+    if not option["has_access"]:
+        return
     event = context.must_event()
     if event.bot_id:
         return
@@ -33,7 +35,9 @@ def handler(context: SlackContext, *_) -> Handler:
 
 async def process(context: SlackContext):
     await context.ack()
-    await context.api.chat.postMessage({
-        **context.reply_args(),
-        "text": "".join(reversed(context.data)) + " ○(￣^￣○)",
-    })
+    await context.api.chat.postMessage(
+        {
+            **context.reply_args(),
+            "text": "".join(reversed(context.data)) + " ○(￣^￣○)",
+        }
+    )

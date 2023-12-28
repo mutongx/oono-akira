@@ -49,6 +49,8 @@ async def fetch_dict_data():
 
 @register("message")
 def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
+    if not option["has_access"]:
+        return
     event = context.must_event()
     if event.bot_id:
         return

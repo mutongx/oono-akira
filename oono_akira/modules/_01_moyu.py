@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 import pytz
-from oono_akira.modules import Handler, register
+from oono_akira.modules import Handler, HandlerConstructorOption, register
 from oono_akira.slack.context import SlackContext
 
 TIMEZONE = pytz.timezone("Asia/Shanghai")
@@ -71,7 +71,9 @@ def get_message() -> str:
 
 
 @register("message")
-def message_handler(context: SlackContext, *_) -> Handler:
+def message_handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
+    if not option["has_access"]:
+        return
     event = context.must_event()
     if event.bot_id:
         return
@@ -86,7 +88,9 @@ def message_handler(context: SlackContext, *_) -> Handler:
 
 
 @register("app_mention")
-def app_mention_handler(context: SlackContext, *_) -> Handler:
+def app_mention_handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
+    if not option["has_access"]:
+        return
     event = context.must_event()
     if event.bot_id:
         return
@@ -98,7 +102,4 @@ def app_mention_handler(context: SlackContext, *_) -> Handler:
 
 async def process(context: SlackContext):
     await context.ack()
-    await context.api.chat.postMessage({
-        **context.reply_args(),
-        "text": get_message()
-    })
+    await context.api.chat.postMessage({**context.reply_args(), "text": get_message()})
