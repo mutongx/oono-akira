@@ -66,7 +66,10 @@ class ModulesManager:
         return self
 
     async def __aexit__(self, *_):
-        await asyncio.gather(*(queue.put(None) for queue in self._queues.values()), *self._tasks)
+        for queue in list(self._queues.values()):
+            await queue.put(None)
+        for task in list(self._tasks):
+            await task
 
     def iterate_modules(self, capability: str) -> Iterable[tuple[str, HandlerConstructor]]:
         if capability in self.CAPABILITIES:
