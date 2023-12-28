@@ -204,7 +204,7 @@ class OonoDatabase:
 
     @asynccontextmanager
     async def get_session(self, **kwargs: str):
-        key = "".join(f"[{key}={value}]" for key, value in sorted(kwargs.items()))
+        key = ",".join(f"{key}={value}" for key, value in sorted(kwargs.items()))
         session = await self._client.session.upsert(
             where={"key": key},
             data={"create": {"key": key, "content": "{}"}, "update": {}},
