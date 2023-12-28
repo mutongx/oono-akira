@@ -15,13 +15,13 @@ def setup(parser: ArgumentParser):
     parser.description = "Manage accesses to restricted modules for channels and users."
     parser.add_argument(
         "access_action",
-        metavar="action",
+        metavar="<action>",
         choices=["grant", "revoke", "list", "check"],
         help="The action to perform: grant/revoke/list/check",
     )
-    parser.add_argument("access_channel", metavar="channel", help="The channel to manage accesses for")
-    parser.add_argument("access_user", metavar="user", help="The user to manage access for")
-    parser.add_argument("access_module", metavar="module", help="The affected module name")
+    parser.add_argument("access_channel", metavar="<channel>", help="The channel to manage accesses for")
+    parser.add_argument("access_user", metavar="<user>", help="The user to manage access for")
+    parser.add_argument("access_module", metavar="<module>", help="The affected module name")
 
 
 async def handler(context: SlackContext | None, args: Namespace) -> CommandResponse:
