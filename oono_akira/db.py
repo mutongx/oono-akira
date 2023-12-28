@@ -128,6 +128,41 @@ class OonoDatabase:
         )
         return set([access.module for access in accesses])
 
+    async def list_accesses(self, workspace: str, channel: str | None, user: str | None, module: str):
+        if channel is not None and user is not None:
+            return await self._client.access.find_many(
+                where={
+                    "workspace": workspace,
+                    "channel": {"in": [channel, ""]},
+                    "user": {"in": [user, ""]},
+                    "module": module,
+                }
+            )
+        if channel is None and user is None:
+            return await self._client.access.find_many(
+                where={
+                    "workspace": workspace,
+                    "module": module,
+                }
+            )
+        if channel is not None and user is None:
+            return await self._client.access.find_many(
+                where={
+                    "workspace": workspace,
+                    "channel": {"in": [channel, ""]},
+                    "module": module,
+                }
+            )
+        if channel is None and user is not None:
+            return await self._client.access.find_many(
+                where={
+                    "workspace": workspace,
+                    "user": {"in": [user, ""]},
+                    "module": module,
+                }
+            )
+        assert False
+
     async def acquire_lock(self, workspace: str, channel: str, module: str):
         return await self._client.lock.upsert(
             where={
