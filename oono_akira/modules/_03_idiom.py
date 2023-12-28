@@ -80,7 +80,7 @@ async def process(context: SlackContext):
     response_quote = None
     response_react = None
 
-    async with context.db.get_session(game="idiom", channel=channel) as session:
+    async with context.db.get_session(game="idiom", workspace=context.workspace.id, channel=channel) as session:
         if text == "成语接龙":
             response_word = random.choice(dictionary["list"])
             session["word"] = response_word
