@@ -28,8 +28,6 @@ async def fetch_dict_data():
         }
         for item in raw:
             pinyin = item["pinyin"].split()
-            if len(pinyin) != 4:
-                continue
             pinyin = list(
                 map(
                     lambda s: unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode(),
