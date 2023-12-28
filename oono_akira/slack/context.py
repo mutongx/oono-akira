@@ -33,3 +33,14 @@ class SlackContext:
         if self.command is None:
             raise RuntimeError("command is None")
         return self.command
+
+    def reply_args(self) -> dict[str, str]:
+        result: dict[str, str] = {}
+        if self.event:
+            result["channel"] = self.event.channel
+            if self.event.thread_ts:
+                result["thread_ts"] = self.event.thread_ts
+        if self.command:
+            result["channel"] = self.command.channel_id
+            result["user"] = self.command.user_id
+        return result
