@@ -11,6 +11,7 @@ def help():
 
 def setup(parser: ArgumentParser):
     parser.description = "Say hello to Oono Akira! She will give you some useful information."
+    parser.add_argument("args", nargs="...", help="Arguments")
 
 
 async def handler(context: SlackContext | None, args: Namespace) -> CommandResponse:
@@ -67,6 +68,12 @@ async def handler(context: SlackContext | None, args: Namespace) -> CommandRespo
                     ),
                 ],
             ),
+            RichTextElement(
+                type="rich_text_preformatted",
+                elements=[
+                    RichTextSpan(type="text", text=str(args.args)),
+                ]
+            )
         ],
     )
     return "message", "Hello from Oono Akira!", [block]
