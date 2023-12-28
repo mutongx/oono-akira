@@ -50,8 +50,8 @@ async def handler(context: SlackContext | None, args: Namespace) -> CommandRespo
             return "message", f"Not a user: {user}", []
         user = match.group(2)
 
-    channel_desc = "*" if channel == "*" else "*all channels*" if channel == "" else f"<#{channel}>"
-    user_desc = "*" if user == "*" else "*all users*" if user == "" else f"<@{user}>"
+    channel_desc = "`*`" if channel == "*" else "*all channels*" if channel == "" else f"<#{channel}>"
+    user_desc = "`*`" if user == "*" else "*all users*" if user == "" else f"<@{user}>"
 
     if action == "grant":
         await context.db.grant_access(context.workspace.id, channel, user, module)
