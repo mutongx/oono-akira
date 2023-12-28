@@ -66,7 +66,7 @@ def get_parser():
     return parser
 
 
-async def run_command(context: SlackContext | None, workspace: str, channel: str, user: str, command_text: str):
+async def run_command(context: SlackContext | None, command_text: str):
     try:
         args = shlex.split(command_text)
         parsed_args = get_parser().parse_args(args)
@@ -75,10 +75,7 @@ async def run_command(context: SlackContext | None, workspace: str, channel: str
         command = commands[parsed_args.command]
         if parsed_args.help:
             raise OonoAdminException(command["parser"].format_help())
-        parsed_args.workspace = workspace
-        parsed_args.channel = channel
-        parsed_args.user = user
-        response = await commands[parsed_args.command]["handler"](context, parsed_args)
+        response = await command["handler"](context, parsed_args)
         if response is None:
             return
         action, text, blocks = response
@@ -88,8 +85,7 @@ async def run_command(context: SlackContext | None, workspace: str, channel: str
                 return
             await context.api.chat.postEphemeral(
                 {
-                    "channel": channel,
-                    "user": user,
+                    **context.reply_args(),
                     "text": text,
                     "blocks": [SlackPayloadDumper.dump(block) for block in blocks],
                 }
@@ -101,8 +97,7 @@ async def run_command(context: SlackContext | None, workspace: str, channel: str
             return
         await context.api.chat.postEphemeral(
             {
-                "channel": channel,
-                "user": user,
+                **context.reply_args(),
                 "text": "Error running /oono command",
                 "blocks": [
                     {
@@ -129,4 +124,4 @@ if __name__ == "__main__":
     import asyncio
     import sys
 
-    asyncio.run(run_command(None, "", "", "", shlex.join(sys.argv[1:])))
+    asyncio.run(run_command(None, shlex.join(sys.argv[1:])))
