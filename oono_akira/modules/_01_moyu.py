@@ -1,5 +1,4 @@
-from calendar import monthrange
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytz
@@ -7,19 +6,16 @@ from oono_akira.modules import Handler, HandlerConstructorOption, register
 from oono_akira.slack.context import SlackContext
 
 TIMEZONE = pytz.timezone("Asia/Shanghai")
+DAYS_IN_MONTH = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 
 
-@staticmethod
 def datetime_tz(*args: Any, **kwargs: Any):
-    return datetime(*args, **kwargs, tzinfo=TIMEZONE)
+    return TIMEZONE.localize(datetime(*args, **kwargs))
 
 
-@staticmethod
 def get_message() -> str:
     now = datetime.now(tz=TIMEZONE)
-
-    weekday = now.weekday()
-    weekday_cn = "一二三四五六日"
 
     # 0-3 深夜
     if now.hour <= 3:
@@ -43,27 +39,32 @@ def get_message() -> str:
     else:
         greeting = "深夜好"
 
-    minute_perc = (now.second * 1e6 + now.microsecond) / 60 / 1e6
-    hour_perc = (now.minute * 60 + now.second) / 60 / 60
-    day_perc = (now.hour * 60 * 60 + now.minute * 60 + now.second) / 60 / 60 / 24
-    week_perc = (weekday * 24 * 60 + now.hour * 60 + now.minute) / 60 / 24 / 7
-    _, days_month = monthrange(now.year, now.month)
-    month_perc = ((now.day - 1) * 60 * 60 + now.hour * 60 + now.minute) / 60 / 60 / days_month
-    days_year = (datetime_tz(now.year + 1, 1, 1) - datetime_tz(now.year, 1, 1)).days
-    year_perc = ((now - datetime_tz(now.year, 1, 1)).days * 24 + now.hour) / days_year / 24
-    days_centry = (datetime_tz(now.year // 100 * 100 + 100, 1, 1) - datetime_tz(now.year // 100 * 100, 1, 1)).days
-    centry_perc = ((now - datetime_tz(now.year // 100 * 100, 1, 1)).days) / days_centry
+    weekday = now.weekday()
+    year_100 = now.year // 100 * 100
+
+    minute = datetime_tz(now.year, now.month, now.day, now.hour, now.minute), timedelta(minutes=1)
+    hour = datetime_tz(now.year, now.month, now.day, now.hour), timedelta(hours=1)
+    day = datetime_tz(now.year, now.month, now.day), timedelta(days=1)
+    week = datetime_tz(now.year, now.month, now.day) - timedelta(days=weekday), timedelta(days=7)
+    month = datetime_tz(now.year, now.month, 1, 0, 0, 0), timedelta(days=DAYS_IN_MONTH[now.month])
+    year = datetime_tz(now.year, 1, 1), datetime_tz(now.year + 1, 1, 1) - datetime_tz(now.year, 1, 1)
+    centry = datetime_tz(year_100, 1, 1, 0), datetime_tz(year_100 + 100, 1, 1, 0) - datetime_tz(year_100, 1, 1, 0)
+
+    def get_percentage(d: tuple[datetime, timedelta]) -> str:
+        nonlocal now
+        return f"{int((now - d[0]).total_seconds() / d[1].total_seconds() * 1000) / 10:.1f}"
+
     return "\n".join(
         [
-            f"{greeting}，现在是 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{weekday_cn[weekday]} (CST)",
+            f"{greeting}，现在是 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{WEEKDAY_CN[weekday]} (CST)",
             f"",
-            f"这分钟已经过去了 {minute_perc * 100:.1f}%",
-            f"这小时已经过去了 {hour_perc * 100:.1f}%",
-            f"这一天已经过去了 {day_perc * 100:.1f}%",
-            f"这一周已经过去了 {week_perc * 100:.1f}%",
-            f"这个月已经过去了 {month_perc * 100:.1f}%",
-            f"这一年已经过去了 {year_perc * 100:.1f}%",
-            f"这世纪已经过去了 {centry_perc * 100:.1f}%",
+            f"这分钟已经过去了 {get_percentage(minute)}%",
+            f"这小时已经过去了 {get_percentage(hour)}%",
+            f"这一天已经过去了 {get_percentage(day)}%",
+            f"这一周已经过去了 {get_percentage(week)}%",
+            f"这个月已经过去了 {get_percentage(month)}%",
+            f"这一年已经过去了 {get_percentage(year)}%",
+            f"这世纪已经过去了 {get_percentage(centry)}%",
             f"",
             f"生命不息，摸鱼不止。",
         ]
