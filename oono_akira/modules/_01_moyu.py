@@ -48,7 +48,7 @@ def get_message() -> str:
     day_perc = (now.hour * 60 * 60 + now.minute * 60 + now.second) / 60 / 60 / 24
     week_perc = (weekday * 24 * 60 + now.hour * 60 + now.minute) / 60 / 24 / 7
     _, days_month = monthrange(now.year, now.month)
-    month_perc = (now.day * 60 * 60 + now.hour * 60 + now.minute) / 60 / 60 / days_month
+    month_perc = ((now.day - 1) * 60 * 60 + now.hour * 60 + now.minute) / 60 / 60 / days_month
     days_year = (datetime_tz(now.year + 1, 1, 1) - datetime_tz(now.year, 1, 1)).days
     year_perc = ((now - datetime_tz(now.year, 1, 1)).days * 24 + now.hour) / days_year / 24
     days_centry = (datetime_tz(now.year // 100 * 100 + 100, 1, 1) - datetime_tz(now.year // 100 * 100, 1, 1)).days
