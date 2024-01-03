@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, Awaitable, Protocol
 
-from prisma.models import Workspace
-
 from oono_akira.db import OonoDatabase
+from oono_akira.db.prisma.models import Workspace
 from oono_akira.slack.send import SlackAPI
 from oono_akira.slack.recv import SlackEventPayload, SlackSlashCommandsPayload
 

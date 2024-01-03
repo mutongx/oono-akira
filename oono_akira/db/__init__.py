@@ -1,9 +1,9 @@
 import json
 from contextlib import asynccontextmanager
 from typing import Any
-from prisma import Prisma
 
 from oono_akira.config import DatabaseConfiguration
+from oono_akira.db.prisma import Prisma
 
 
 class OonoDatabase:
