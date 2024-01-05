@@ -205,6 +205,9 @@ class OonoAkira:
         if payload.event.user == workspace.botId:
             await ack()
             return "ignore_self"
+        if payload.event.user == "USLACKBOT":
+            await ack()
+            return "ignore_slackbot"
 
         context = SlackContext(
             id=envelope_id,

@@ -35,8 +35,6 @@ def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
 async def process(context: SlackContext):
     await context.ack()
     event = context.must_event()
-    if event.user == "USLACKBOT":
-        return
     profile = await context.api.users.info({"user": event.user})
     await context.api.chat.postMessage(
         {
