@@ -52,6 +52,8 @@ def handler(context: SlackContext, option: HandlerConstructorOption) -> Handler:
     event = context.must_event()
     if event.bot_id:
         return
+    if event.thread_ts:
+        return
     if not event.text:
         return
     queue = f"{context.workspace.id}/{event.channel}"
