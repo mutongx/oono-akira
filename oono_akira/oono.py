@@ -7,7 +7,7 @@ from collections import deque
 from contextlib import AsyncExitStack
 from typing import Any, MutableMapping, Coroutine
 
-from aiohttp import ClientSession, web
+from aiohttp import ClientSession, web, WSMsgType
 from aiohttp.web_request import Request
 
 from oono_akira.config import Configuration
@@ -132,6 +132,9 @@ class OonoAkira:
                         if recv in done:
                             # Receive data
                             recv_result = await recv
+                            if recv_result.type == WSMsgType.ERROR:
+                                log(f"Websocket returned error: {recv_result}")
+                                break
                             self._run_in_background(self._db.record_payload("websocket", recv_result.data))
                             # Start a new recv task
                             recv = asyncio.create_task(conn.receive())
