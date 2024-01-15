@@ -116,9 +116,9 @@ async def get_message() -> str:
 
     return "\n".join(
         [
-            f"{greeting}，现在是 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{WEEKDAY_CN[weekday]} (CST)",
+            f"{greeting}。现在是北京时间 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{WEEKDAY_CN[weekday]}。",
             f"",
-            f"今天是农历{cn_date[0]}年{cn_date[1]}{cn_date[2]}",
+            f"今天是农历{cn_date[0]}年{cn_date[1]}{cn_date[2]}。",
             f"",
             f"这分钟已经过去了 {get_percentage(minute)}%",
             f"这小时已经过去了 {get_percentage(hour)}%",
