@@ -16,7 +16,7 @@ dict_data = None
 async def fetch_dict_data():
     global dict_data
     if dict_data is None:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.get(dict_data_url) as resp:
                 text = await resp.text()
         raw = json.loads(text)
