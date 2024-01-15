@@ -1,17 +1,17 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import Any
 
-import pytz
 from oono_akira.modules import Handler, HandlerConstructorOption, register
 from oono_akira.slack.context import SlackContext
 
-TIMEZONE = pytz.timezone("Asia/Shanghai")
+TIMEZONE = ZoneInfo("Asia/Shanghai")
 DAYS_IN_MONTH = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 
 
 def datetime_tz(*args: Any, **kwargs: Any):
-    return TIMEZONE.localize(datetime(*args, **kwargs))
+    return datetime(*args, **kwargs, tzinfo=TIMEZONE)
 
 
 def get_message() -> str:
