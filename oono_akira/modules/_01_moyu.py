@@ -17,6 +17,7 @@ CHINESE_CALENDAR_MAPPING: dict[tuple[int, int, int], tuple[str, str, str, str | 
 
 RE_TITLE = re.compile(r"\d{4}\((\S\S) - 肖\S\)年公曆與農曆日期對照表")
 RE_DATE = re.compile(r"^(\d+)年(\d+)月(\d+)日\s+(\S+)\s+星期\S\s+(?:(\S+)\s+)?$")
+ZH_MAPPING: dict[str, str] = dict([("驚蟄", "惊蛰"), ("穀雨", "谷雨"), ("小滿", "小满"), ("芒種", "芒种"), ("處暑", "处暑")])
 
 
 async def get_chinese_calendar_data(year: int):
@@ -62,8 +63,9 @@ async def get_chinese_date(now: datetime):
             if current_day == "正月":
                 current_year = this_year
             if current_day[-1] == "月":
-                current_month = current_day
+                current_month = current_day.replace("閏", "闰")
                 current_day = "初一"
+            day_term = ZH_MAPPING.get(day_term, day_term)
             CHINESE_CALENDAR_MAPPING[date] = (current_year, current_month, current_day, day_term)
     return CHINESE_CALENDAR_MAPPING[now_date]
 
