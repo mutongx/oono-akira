@@ -13,7 +13,7 @@ DAYS_IN_MONTH = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 CHINESE_CALENDAR_URL = "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T{year}c.txt"
 CHINESE_CALENDAR_DATA: dict[int, str] = {}
-CHINESE_CALENDAR_MAPPING: dict[tuple[int, int, int], tuple[str, str, str]] = {}
+CHINESE_CALENDAR_MAPPING: dict[tuple[int, int, int], tuple[str, str, str, str | None]] = {}
 
 RE_TITLE = re.compile(r"\d{4}\((\S\S) - 肖\S\)年公曆與農曆日期對照表")
 RE_DATE = re.compile(r"^(\d+)年(\d+)月(\d+)日\s+(\S+)\s+星期\S\s+(?:(\S+)\s+)?$")
@@ -57,14 +57,14 @@ async def get_chinese_date(now: datetime):
             date_match = RE_DATE.fullmatch(line)
             if date_match is None:
                 raise RuntimeError(f"failed to parse date line: {line}")
-            year_s, month_s, day_s, current_day, _ = date_match.groups()
+            year_s, month_s, day_s, current_day, day_term = date_match.groups()
             date = int(year_s), int(month_s), int(day_s)
             if current_day == "正月":
                 current_year = this_year
             if current_day[-1] == "月":
                 current_month = current_day
                 current_day = "初一"
-            CHINESE_CALENDAR_MAPPING[date] = (current_year, current_month, current_day)
+            CHINESE_CALENDAR_MAPPING[date] = (current_year, current_month, current_day, day_term)
     return CHINESE_CALENDAR_MAPPING[now_date]
 
 
@@ -118,7 +118,7 @@ async def get_message() -> str:
         [
             f"{greeting}。现在是北京时间 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{WEEKDAY_CN[weekday]}。",
             f"",
-            f"今天是农历{cn_date[0]}年{cn_date[1]}{cn_date[2]}。",
+            f"今天是农历{cn_date[0]}年{cn_date[1]}{cn_date[2]}{f'，{cn_date[3]}' if cn_date[3] else ''}。",
             f"",
             f"这分钟已经过去了 {get_percentage(minute)}%",
             f"这小时已经过去了 {get_percentage(hour)}%",
