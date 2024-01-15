@@ -1,3 +1,6 @@
+import aiohttp
+import asyncio
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Any
@@ -8,14 +11,71 @@ from oono_akira.slack.context import SlackContext
 TIMEZONE = ZoneInfo("Asia/Shanghai")
 DAYS_IN_MONTH = [-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
+CHINESE_CALENDAR_URL = "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T{year}c.txt"
+CHINESE_CALENDAR_DATA: dict[int, str] = {}
+CHINESE_CALENDAR_MAPPING: dict[tuple[int, int, int], tuple[str, str, str]] = {}
+
+RE_TITLE = re.compile(r"\d{4}\((\S\S) - 肖\S\)年公曆與農曆日期對照表")
+RE_DATE = re.compile(r"^(\d+)年(\d+)月(\d+)日\s+(\S+)\s+星期\S\s+(?:(\S+)\s+)?$")
+
+
+async def get_chinese_calendar_data(year: int):
+    async def get_or_fetch(year: int):
+        if year not in CHINESE_CALENDAR_DATA:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(CHINESE_CALENDAR_URL.format(year=year)) as resp:
+                    resp.raise_for_status()
+                    data = await resp.text("big5")
+            CHINESE_CALENDAR_DATA[year] = data
+        return CHINESE_CALENDAR_DATA[year]
+
+    return await asyncio.gather(get_or_fetch(year - 1), get_or_fetch(year))
+
+
+async def get_chinese_date(now: datetime):
+    now_date = (now.year, now.month, now.day)
+    if now_date not in CHINESE_CALENDAR_MAPPING:
+        last_data, this_data = await get_chinese_calendar_data(now.year)
+        last_lines, this_lines = last_data.split("\r\n"), this_data.split("\r\n")
+        last_name_match, this_name_match = RE_TITLE.fullmatch(last_lines[0]), RE_TITLE.fullmatch(this_lines[0])
+        if last_name_match is None or this_name_match is None:
+            raise RuntimeError("failed to get year name")
+        last_year, this_year = last_name_match.group(1), this_name_match.group(1)
+        current_year = last_year
+        current_month = None
+        for line in last_lines[-2:2:-1]:
+            date_match = RE_DATE.fullmatch(line)
+            if date_match is None:
+                raise RuntimeError(f"failed to parse date line: {line}")
+            date = date_match.group(4)
+            if date[-1] == "月":
+                current_month = date
+                break
+        else:
+            raise RuntimeError(f"failed to find month of last year")
+        for line in this_lines[3:-1]:
+            date_match = RE_DATE.fullmatch(line)
+            if date_match is None:
+                raise RuntimeError(f"failed to parse date line: {line}")
+            year_s, month_s, day_s, current_day, _ = date_match.groups()
+            date = int(year_s), int(month_s), int(day_s)
+            if current_day == "正月":
+                current_year = this_year
+            if current_day[-1] == "月":
+                current_month = current_day
+                current_day = "初一"
+            CHINESE_CALENDAR_MAPPING[date] = (current_year, current_month, current_day)
+    return CHINESE_CALENDAR_MAPPING[now_date]
 
 
 def datetime_tz(*args: Any, **kwargs: Any):
     return datetime(*args, **kwargs, tzinfo=TIMEZONE)
 
 
-def get_message() -> str:
+async def get_message() -> str:
     now = datetime.now(tz=TIMEZONE)
+
+    cn_date = await get_chinese_date(now)
 
     # 0-3 深夜
     if now.hour <= 3:
@@ -57,6 +117,8 @@ def get_message() -> str:
     return "\n".join(
         [
             f"{greeting}，现在是 {now.strftime('%Y 年 %m 月 %d 日 %H:%M')}，星期{WEEKDAY_CN[weekday]} (CST)",
+            f"",
+            f"今天是农历{cn_date[0]}年{cn_date[1]}{cn_date[2]}",
             f"",
             f"这分钟已经过去了 {get_percentage(minute)}%",
             f"这小时已经过去了 {get_percentage(hour)}%",
@@ -103,4 +165,4 @@ def app_mention_handler(context: SlackContext, option: HandlerConstructorOption)
 
 async def process(context: SlackContext):
     await context.ack()
-    await context.api.chat.postMessage({**context.reply_args(), "text": get_message()})
+    await context.api.chat.postMessage({**context.reply_args(), "text": await get_message()})
