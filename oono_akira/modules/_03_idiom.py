@@ -111,7 +111,7 @@ async def process(context: SlackContext):
                     session["word"] = response_word
 
     if response_word is not None:
-        response_text = response_word["word"]
+        response_text = response_word["word"] + " (" + response_word["pinyin"] + ")"
         response_quote = response_word["explanation"]
 
     if response_text is not None:
